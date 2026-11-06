@@ -54,6 +54,10 @@
     <string name="setup_ftp_hint">Auto</string>
     <string name="setup_ftp_help">Leave empty: worked out from Stride\'s planned power. Enter watts to use your own FTP.</string>
     <string name="setup_api_key">API token</string>
+    <string name="phone_entry">Enter on phone</string>
+    <string name="phone_entry_open">On a phone on the same Wi-Fi, open:\n%1$s</string>
+    <string name="phone_entry_no_wifi">Connect the Karoo to Wi-Fi first (the phone must be on the same network).</string>
+    <string name="phone_entry_received">Token received from the phone and saved ✓</string>
     <string name="setup_loading">Loading…</string>
     <string name="setup_error">Couldn\'t load workouts</string>
     <string name="workouts_title">Workouts</string>

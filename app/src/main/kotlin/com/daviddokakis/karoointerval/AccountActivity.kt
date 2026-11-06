@@ -11,6 +11,8 @@ import android.widget.ScrollView
 /** Stride account: API token and optional FTP. Back (top left) discards, Save (bottom) keeps. */
 class AccountActivity : AppearanceActivity() {
 
+    private var phoneEntry: PhoneEntry? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val store = PlanStore.get(this)
@@ -27,6 +29,20 @@ class AccountActivity : AppearanceActivity() {
         val ftp = edit(store.ftp, InputType.TYPE_CLASS_NUMBER).apply { hint = getString(R.string.setup_ftp_hint) }
         form.addView(ftp)
         form.addView(text(getString(R.string.setup_ftp_help), 13f, secondary = true))
+
+        // Typing a long token on the Karoo is hard: paste it on a phone on the same Wi-Fi instead.
+        lateinit var phoneBlock: LinearLayout
+        val entry = PhoneEntry { token, ftpValue ->
+            key.setText(token)
+            ftp.setText(ftpValue)
+            store.apiKey = token
+            store.ftp = ftpValue
+            setResult(RESULT_OK)
+            phoneEntryReceived(phoneBlock)
+        }
+        phoneEntry = entry
+        phoneBlock = phoneEntryBlock(entry)
+        form.addView(phoneBlock, 1)
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -58,5 +74,10 @@ class AccountActivity : AppearanceActivity() {
             },
         )
         setContentView(root)
+    }
+
+    override fun onDestroy() {
+        phoneEntry?.stop()
+        super.onDestroy()
     }
 }

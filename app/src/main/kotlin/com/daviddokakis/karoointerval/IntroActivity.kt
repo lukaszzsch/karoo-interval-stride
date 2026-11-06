@@ -45,6 +45,16 @@ class IntroActivity : AppearanceActivity() {
     private var keyField: EditText? = null
     private var ftpField: EditText? = null
 
+    /** Token entry from a phone (page 1); stopped when the intro closes. */
+    private val phoneEntry = PhoneEntry { token, ftp ->
+        store.apiKey = token
+        store.ftp = ftp
+        keyField?.setText(token)
+        ftpField?.setText(ftp)
+        phoneBlock?.let { phoneEntryReceived(it) }
+    }
+    private var phoneBlock: LinearLayout? = null
+
     private val again get() = intent.getBooleanExtra(EXTRA_AGAIN, false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -103,6 +113,11 @@ class IntroActivity : AppearanceActivity() {
         render()
     }
 
+    override fun onDestroy() {
+        phoneEntry.stop()
+        super.onDestroy()
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putInt(STATE_PAGE, page)
@@ -152,6 +167,7 @@ class IntroActivity : AppearanceActivity() {
         content.removeAllViews()
         keyField = null
         ftpField = null
+        phoneBlock = null
         when (page) {
             0 -> welcome()
             1 -> look()
@@ -199,6 +215,7 @@ class IntroActivity : AppearanceActivity() {
             compact()
         }.also { content.addView(it) }
         content.addView(settingsHelp(getString(R.string.intro_key_help)).apply { setPadding(0, dp(2), 0, 0) })
+        phoneBlock = phoneEntryBlock(phoneEntry).also { content.addView(it) }
         label(R.string.setup_ftp)
         ftpField = edit(store.ftp, InputType.TYPE_CLASS_NUMBER).apply {
             hint = getString(R.string.setup_ftp_hint)
