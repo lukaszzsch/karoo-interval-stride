@@ -87,7 +87,8 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
         scope.launch {
             ratings.rating.collect { r -> workout.setRatingSummary(r.summary(this@IntervalExtension)) }
         }
-        // Ask when the workout finishes, or on a manual pause during a workout, if not rated yet.
+        // Ask when the workout finishes, or on any manual pause of the ride, if not rated yet
+        // (auto-pauses at traffic lights don't ask).
         scope.launch {
             workout.state.map { it.finished }.distinctUntilChanged().filter { it }.collect {
                 if (ratings.rating.value.rpe == null) askForRating()
@@ -97,7 +98,7 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
             var wasManualPause = false
             rideState.collect { ride ->
                 val manualPause = ride is RideState.Paused && !ride.auto
-                if (manualPause && !wasManualPause && workout.state.value.workoutLoaded && ratings.rating.value.rpe == null) {
+                if (manualPause && !wasManualPause && ratings.rating.value.rpe == null) {
                     askForRating()
                 }
                 wasManualPause = manualPause
@@ -112,7 +113,8 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
     private fun askForRating() {
         karoo.dispatch(
             SystemNotification(
-                id = NOTIFICATION_RATE,
+                // A new id each time: the Karoo may not show a notification again under the same id.
+                id = "$NOTIFICATION_RATE-${System.currentTimeMillis()}",
                 header = getString(R.string.rate_notification_header),
                 message = getString(R.string.rate_notification_message),
                 subText = getString(R.string.rate_notification_sub),
