@@ -81,9 +81,9 @@ class PhoneEntry(private val onReceived: (token: String, ftp: String) -> Unit) {
             out.write(body)
             out.flush()
         }
-        if (target != path) return reply("404 Not Found", "<p>Not found. Check the address shown on the Karoo.</p>")
+        if (target != path) return reply("404 Not Found", "<p>Nie znaleziono. Sprawdź adres pokazany na Karoo.</p>")
         if (method == "GET") return reply("200 OK", FORM)
-        if (method != "POST") return reply("405 Method Not Allowed", "<p>Not allowed.</p>")
+        if (method != "POST") return reply("405 Method Not Allowed", "<p>Niedozwolone.</p>")
 
         val bytes = ByteArray(length)
         var read = 0
@@ -97,9 +97,9 @@ class PhoneEntry(private val onReceived: (token: String, ftp: String) -> Unit) {
             if (key.isEmpty()) null else key to URLDecoder.decode(pair.substringAfter('='), "UTF-8").trim()
         }.toMap()
         val token = fields["token"].orEmpty()
-        if (token.isBlank()) return reply("200 OK", "<p class=err>The token is empty.</p>$FORM")
+        if (token.isBlank()) return reply("200 OK", "<p class=err>Token jest pusty.</p>$FORM")
         val ftp = fields["ftp"].orEmpty().filter { it.isDigit() }
-        reply("200 OK", "<h1>Sent ✓</h1><p>The token is on the Karoo now. You can close this page.</p>")
+        reply("200 OK", "<h1>Wysłano ✓</h1><p>Token jest już na Karoo. Możesz zamknąć tę stronę.</p>")
         main.post { onReceived(token, ftp) }
         main.post { stop() }
     }
@@ -118,14 +118,14 @@ class PhoneEntry(private val onReceived: (token: String, ftp: String) -> Unit) {
     companion object {
         private const val FORM = """
 <h1>Interval Screen Stride</h1>
-<p>Paste your Stride API token (stride.is → Settings → API).</p>
+<p>Wklej token API ze Stride (stride.is → Settings → API).</p>
 <form method="post">
-<label>API token<br><input name="token" autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
-<label>FTP in watts (optional, leave empty for auto)<br><input name="ftp" inputmode="numeric" pattern="[0-9]*"></label>
-<button type="submit">Send to Karoo</button>
+<label>Token API<br><input name="token" autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
+<label>FTP w watach (opcjonalnie, puste = auto)<br><input name="ftp" inputmode="numeric" pattern="[0-9]*"></label>
+<button type="submit">Wyślij na Karoo</button>
 </form>"""
 
-        private fun page(body: String) = """<!doctype html><html><head><meta charset="utf-8">
+        private fun page(body: String) = """<!doctype html><html lang="pl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Interval Screen Stride</title>
 <style>body{font-family:system-ui,sans-serif;margin:24px;max-width:480px;line-height:1.4}
 label{display:block;margin:16px 0;font-weight:600}input{width:100%;box-sizing:border-box;font-size:17px;padding:10px;margin-top:6px}

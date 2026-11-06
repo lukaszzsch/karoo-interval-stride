@@ -23,16 +23,33 @@ data class PlanStep(
     val cadenceLow: Int? = null,
     val cadenceHigh: Int? = null,
 ) {
-    /** "85–90 rpm", or null when the step has no cadence target. */
-    val cadenceText: String?
+    /** "85–90", or null when the step has no cadence target. */
+    val cadenceRange: String?
         get() = when {
-            cadenceLow != null && cadenceHigh != null && cadenceLow != cadenceHigh -> "$cadenceLow\u2013$cadenceHigh rpm"
-            cadenceLow != null -> "$cadenceLow rpm"
-            cadenceHigh != null -> "$cadenceHigh rpm"
+            cadenceLow != null && cadenceHigh != null && cadenceLow != cadenceHigh -> "$cadenceLow\u2013$cadenceHigh"
+            cadenceLow != null -> "$cadenceLow"
+            cadenceHigh != null -> "$cadenceHigh"
             else -> null
         }
 
+    /** "85–90 rpm", or null when the step has no cadence target. */
+    val cadenceText: String? get() = cadenceRange?.let { "$it rpm" }
+
+    /** Whether [rpm] is below (-1), in (0) or above (1) the cadence target; null without one. */
+    fun cadenceState(rpm: Int): Int? {
+        val low = cadenceLow ?: cadenceHigh ?: return null
+        val high = cadenceHigh ?: low
+        return when {
+            rpm < minOf(low, high) -> -1
+            rpm > maxOf(low, high) -> 1
+            else -> 0
+        }
+    }
+
     val avgWatts: Int get() = (startWatts + endWatts) / 2
+
+    /** A step without a power target (a ride by feel when the FTP isn't known). */
+    val hasTarget: Boolean get() = startWatts > 0 || endWatts > 0
     val isRamp: Boolean get() = ramp && startWatts != endWatts
 
     /** Target at [elapsedSec] into the step. */

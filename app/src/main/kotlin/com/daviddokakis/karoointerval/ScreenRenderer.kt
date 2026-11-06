@@ -3,7 +3,10 @@ package com.daviddokakis.karoointerval
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.Typeface
 import android.os.Build
+import android.os.SystemClock
+import android.text.TextPaint
 import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
@@ -310,7 +313,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
                     v.setTextColor(R.id.next_value, color(R.color.text))
                 }
                 next != null -> {
-                    v.setTextViewText(R.id.next_label, withDetails(context.getString(R.string.next_up), next))
+                    v.setTextViewText(R.id.next_label, withDetails(context.getString(R.string.next_up), next, karoo))
                     v.setViewVisibility(R.id.next_label, View.VISIBLE)
                     v.setTextViewText(R.id.next_value, summary(next))
                     v.setTextColor(R.id.next_value, color(R.color.text))
@@ -471,18 +474,100 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
      * "Interval 3 / 20", plus the step's cadence target and coach's note when it has them:
      * "3 / 20 · 85–90 rpm · Spokojny start" (the label ellipsizes if it's too long).
      */
-    private fun intervalLabel(s: ScreenState): String {
+    private fun intervalLabel(s: ScreenState): CharSequence {
         val step = s.currentStep
-        val extras = listOfNotNull(step?.cadenceText, step?.note)
-        if (extras.isEmpty()) return context.getString(R.string.interval_of, s.stepIndex + 1, s.stepCount)
-        return (listOf("${s.stepIndex + 1} / ${s.stepCount}") + extras).joinToString(" \u00b7 ")
+        // Cadence: live rpm with the step's target in brackets, coloured below / in / above it.
+        val live = s.cadence?.takeIf { it > 0 }
+        val target = step?.cadenceRange
+        val liveText = live?.let { "$it rpm" }
+        val cadence = when {
+            liveText != null && target != null -> "$liveText ($target)"
+            liveText != null -> liveText
+            else -> step?.cadenceText
+        }
+        if (cadence == null && step?.note == null) return context.getString(R.string.interval_of, s.stepIndex + 1, s.stepCount)
+        val counter = "${s.stepIndex + 1} / ${s.stepCount}"
+        val prefix = (listOf(counter) + listOfNotNull(cadence)).joinToString(SEP)
+        // Room for the label: the row minus the time left on its right (and Karoo style's timer icon).
+        val timePx = measure("\u2212" + "00:00", if (s.karooStyle) 23f else 30f, bold = true, karoo = false)
+        val avail = config.viewSize.first - (16 + 8 + if (s.karooStyle) 16 else 0) * density - timePx
+        val text = ticker(intervalTicker, prefix, step?.note, avail, 13f, s.karooStyle)
+        val state = if (live != null) step?.cadenceState(live) else null
+        if (liveText == null || state == null) return text
+        val start = counter.length + SEP.length
+        return android.text.SpannableString(text).apply {
+            val c = color(
+                when (state) {
+                    -1 -> R.color.watts_under
+                    0 -> R.color.watts_in_range
+                    else -> R.color.watts_over
+                },
+            )
+            setSpan(android.text.style.ForegroundColorSpan(c), start, start + liveText.length, 0)
+        }
     }
 
     /** "Next up · 92–98 rpm · Dwuminutówka 2" when the step has a cadence target or note. */
-    private fun withDetails(label: String, step: PlanStep): String =
-        (listOf(label) + listOfNotNull(step.cadenceText, step.note)).joinToString(" \u00b7 ")
+    private fun withDetails(label: String, step: PlanStep, karoo: Boolean): String {
+        val prefix = (listOf(label) + listOfNotNull(step.cadenceText)).joinToString(SEP)
+        // Between the 56 dp ⏮ and ⏭ buttons.
+        val avail = config.viewSize.first - (16 + 112 + 16) * density
+        return ticker(nextTicker, prefix, step.note, avail, 11f, karoo)
+    }
 
-    private fun summary(step: PlanStep): String = if (step.isRange && step.rangeLow != null && step.rangeHigh != null) {
+    /** When the note being scrolled first showed, per label. */
+    private class Ticker(var text: String? = null, var since: Long = 0L)
+    private val intervalTicker = Ticker()
+    private val nextTicker = Ticker()
+
+    /**
+     * "[prefix] · [note]", with a note that's too long for [availPx] scrolled word by word, one
+     * word per redraw (the field redraws about once a second): it waits at the start, moves
+     * along until its end shows, waits there, then starts again.
+     */
+    private fun ticker(t: Ticker, prefix: String, note: String?, availPx: Float, sp: Float, karoo: Boolean): String {
+        if (note.isNullOrBlank()) return prefix
+        val full = prefix + SEP + note
+        if (measure(full, sp, bold = !karoo, karoo = karoo) <= availPx) return full
+        val now = SystemClock.elapsedRealtime()
+        // Keyed on the note only: the prefix's live cadence changes every second.
+        if (t.text != note) {
+            t.text = note
+            t.since = now
+        }
+        val room = availPx - measure(prefix + SEP + "\u2026", sp, bold = !karoo, karoo = karoo)
+        // Offsets where a word starts, up to the first from which the rest of the note fits.
+        val starts = mutableListOf(0)
+        for (i in 1 until note.length) {
+            if (note[i - 1] == ' ' && note[i] != ' ') {
+                if (measure(note.substring(starts.last()), sp, !karoo, karoo) <= room) break
+                starts += i
+            }
+        }
+        if (starts.size == 1) return full // a single long word: leave it to the ellipsis
+        val frames = HOLD + starts.size - 1 + HOLD
+        val frame = ((now - t.since) / 1000L % frames).toInt()
+        val index = (frame - HOLD + 1).coerceIn(0, starts.size - 1)
+        val shown = note.substring(starts[index])
+        return prefix + SEP + (if (index > 0) "\u2026" else "") + shown
+    }
+
+    private val measurePaint = TextPaint(TextPaint.ANTI_ALIAS_FLAG)
+
+    /** Width in px of [text] at [sp], roughly as the field draws it. */
+    private fun measure(text: String, sp: Float, bold: Boolean, karoo: Boolean): Float {
+        measurePaint.textSize = sp * density * scale
+        measurePaint.typeface = when {
+            karoo -> Typeface.create("sans-serif-condensed", Typeface.NORMAL)
+            bold -> Typeface.DEFAULT_BOLD
+            else -> Typeface.DEFAULT
+        }
+        return measurePaint.measureText(if (karoo) text.uppercase() else text)
+    }
+
+    private fun summary(step: PlanStep): String = if (!step.hasTarget) {
+        formatDuration(step.durationSec)
+    } else if (step.isRange && step.rangeLow != null && step.rangeHigh != null) {
         context.getString(R.string.step_summary_ramp, formatDuration(step.durationSec), step.rangeLow, step.rangeHigh)
     } else if (step.isRamp) {
         context.getString(R.string.step_summary_ramp, formatDuration(step.durationSec), step.startWatts, step.endWatts)
@@ -586,6 +671,9 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     }
 
     companion object {
+        private const val SEP = " \u00b7 "
+        /** Redraws (about seconds) a scrolled note waits at its start and at its end. */
+        private const val HOLD = 2
         /** Gear and pause icons: 55% of the text colour. */
         private const val ICON_ALPHA = 140
         private const val REF_W_DP = 255f

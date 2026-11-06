@@ -113,8 +113,9 @@ class PlanStore private constructor(context: Context) {
     suspend fun refreshWeek(karoo: KarooSystemService): List<PlannedWorkout> {
         val today = LocalDate.now()
         val monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-        val workouts = Stride(apiKey, ftpOverride)
+        val workouts = Stride(apiKey, ftpOverride, prefs.getInt(KEY_LAST_FTP, 0).takeIf { it > 0 })
             .plannedWorkouts(monday, monday.plusDays(6)) { url, headers -> karoo.karooHttpGet(url, headers) }
+        workouts.firstNotNullOfOrNull { it.plan.ftp }?.let { prefs.edit().putInt(KEY_LAST_FTP, it).apply() }
         prefs.edit()
             .putString(KEY_WEEK_JSON, JSONArray(workouts.map { JSONObject(it.json) }).toString())
             .putString(KEY_WEEK_SYNCED, LocalDateTime.now().toString())
@@ -175,6 +176,7 @@ class PlanStore private constructor(context: Context) {
 
     companion object {
         private const val KEY_FTP = "ftp"
+        private const val KEY_LAST_FTP = "last_ftp"
         private const val KEY_API_KEY = "stride_token"
         private const val KEY_SELECTED_JSON = "selected_json"
         private const val KEY_SELECTED_DATE = "selected_date"

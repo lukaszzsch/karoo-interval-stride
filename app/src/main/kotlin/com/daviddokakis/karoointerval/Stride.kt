@@ -29,7 +29,12 @@ data class PlannedWorkout(
  * Requests go through the Karoo ([karooHttpGet]), which uses Wi-Fi when connected and otherwise
  * the phone connected through the Hammerhead Companion app.
  */
-class Stride(private val token: String, private val ftpOverride: Int?) {
+class Stride(
+    private val token: String,
+    private val ftpOverride: Int?,
+    /** FTP worked out at an earlier sync, for sessions without a structured workout. */
+    private val lastFtp: Int? = null,
+) {
 
     /** Stride answered, but with an error (wrong token, no subscription, server problem). */
     class ApiException(message: String) : Exception(message)
@@ -42,14 +47,21 @@ class Stride(private val token: String, private val ftpOverride: Int?) {
     ): List<PlannedWorkout> {
         val headers = mapOf("Authorization" to "Bearer $token", "Accept" to "application/json")
         val list = get("$BASE/athletes/me/activities", headers)
-        check(list, "list activities")
+        check(list, "lista aktywności")
         val activities = JSONObject(list.body).optJSONArray("activities") ?: JSONArray()
 
         val out = mutableListOf<PlannedWorkout>()
+        val free = mutableListOf<JSONObject>()
         for (i in 0 until activities.length()) {
             val activity = activities.optJSONObject(i) ?: continue
-            if (!activity.optBoolean("has_workout", false)) continue
             if (!isRide(activity)) continue
+            if (!activity.optBoolean("has_workout", false)) {
+                // "Ride by feel": no structure, only a duration (and an intensity). Added below,
+                // once the structured workouts have told us the FTP.
+                val date = plannedDate(activity)
+                if (date != null && date >= oldest && date <= newest && activity.optInt("planned_duration_seconds") > 0) free += activity
+                continue
+            }
             val date = plannedDate(activity) ?: continue
             if (date < oldest || date > newest) continue
 
@@ -57,7 +69,7 @@ class Stride(private val token: String, private val ftpOverride: Int?) {
             if (id.isBlank()) continue
             val result = get("$BASE/activities/$id/workout", headers)
             if (result.statusCode == 403 || result.statusCode == 404) continue // e.g. garmin_data_withheld
-            check(result, "load workout")
+            check(result, "trening")
             val workout = JSONObject(result.body)
             val stored = JSONObject()
                 .put("activity", activity)
@@ -65,23 +77,29 @@ class Stride(private val token: String, private val ftpOverride: Int?) {
             ftpOverride?.let { stored.put("ftp", it) }
             val planned = plannedFrom(stored)
                 ?: if (ftpOf(stored) == null && hasSegments(workout)) {
-                    throw ApiException("No FTP for \"${activity.optString("name")}\". Enter your FTP under Account.")
+                    throw ApiException("Brak FTP dla „${activity.optString("name")}”. Wpisz FTP w Koncie.")
                 } else {
                     null
                 }
             planned?.let(out::add)
+        }
+        val ftp = ftpOverride ?: out.firstNotNullOfOrNull { it.plan.ftp } ?: lastFtp
+        for (activity in free) {
+            val stored = JSONObject().put("activity", activity)
+            ftp?.let { stored.put("ftp", it) }
+            plannedFrom(stored)?.let(out::add)
         }
         return out.sortedBy { it.date }
     }
 
     private fun check(result: HttpResult, what: String) {
         val code = result.statusCode
-        if (code == 401) throw ApiException("Stride rejected the API token")
+        if (code == 401) throw ApiException("Stride odrzucił token API")
         if (code == 402 || code == 403) {
             val detail = runCatching { JSONObject(result.body).optString("detail") }.getOrNull()
-            throw ApiException(detail?.ifBlank { null } ?: "Stride refused access (HTTP $code). An active Stride trial or subscription is needed.")
+            throw ApiException(detail?.ifBlank { null } ?: "Stride odmówił dostępu (HTTP $code). Potrzebny jest aktywny okres próbny lub subskrypcja Stride.")
         }
-        if (code !in 200..299) throw ApiException("Stride returned HTTP $code ($what)")
+        if (code !in 200..299) throw ApiException("Stride zwrócił HTTP $code ($what)")
     }
 
     companion object {
@@ -114,7 +132,7 @@ class Stride(private val token: String, private val ftpOverride: Int?) {
         /** The workout of a stored session as a [WorkoutPlan]. */
         fun parseEvent(stored: JSONObject): WorkoutPlan? {
             val activity = stored.optJSONObject("activity") ?: return null
-            val workout = stored.optJSONObject("workout") ?: return null
+            val workout = stored.optJSONObject("workout") ?: return freePlan(activity, stored)
             val segments = workout.optJSONArray("segments") ?: return null
             val ftp = ftpOf(stored)
             val steps = mutableListOf<PlanStep>()
@@ -126,11 +144,37 @@ class Stride(private val token: String, private val ftpOverride: Int?) {
             if (steps.isEmpty()) return null
             return WorkoutPlan(
                 id = activity.optString("id").ifBlank { workout.optString("id") },
-                name = activity.optString("name").ifBlank { workout.optString("name", "Workout") },
+                name = activity.optString("name").ifBlank { workout.optString("name", "Trening") },
                 steps = steps,
                 ftp = ftp,
             )
         }
+
+        /**
+         * A session without structure as one long step: its planned duration, and (when the FTP
+         * is known) a broad target around its planned intensity. Without an FTP it has no target.
+         */
+        private fun freePlan(activity: JSONObject, stored: JSONObject): WorkoutPlan? {
+            val duration = activity.optInt("planned_duration_seconds").takeIf { it > 0 } ?: return null
+            val ftp = stored.optDoubleOrNull("ftp")?.roundToInt()?.takeIf { it > 0 }
+            val intensity = activity.optDoubleOrNull("planned_intensity")?.takeIf { it > 0 }
+            val step = if (ftp != null && intensity != null) {
+                val target = (intensity * ftp).roundToInt()
+                val band = (target * FREE_BAND).roundToInt()
+                PlanStep(duration, target, target, rangeLow = target - band, rangeHigh = target + band, isRange = true)
+            } else {
+                PlanStep(duration, 0, 0)
+            }
+            return WorkoutPlan(
+                id = activity.optString("id"),
+                name = activity.optString("name").ifBlank { "Jazda" },
+                steps = listOf(step.copy(note = activity.optString("description").trim().ifBlank { null })),
+                ftp = ftp,
+            )
+        }
+
+        /** ± around the target of a session without structure. */
+        private const val FREE_BAND = 0.08
 
         /** FTP typed in by the rider, else worked out from the planned average power. */
         internal fun ftpOf(stored: JSONObject): Int? {

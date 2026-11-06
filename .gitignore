@@ -12,3 +12,6 @@ captures/
 keystore.properties
 *.jks
 *.keystore
+# Exception: the Stride build's key. It is locked with a random password that lives only in
+# the KEYSTORE_PASSWORD Actions secret, so CI can sign every build with the same key.
+!signing/release.jks

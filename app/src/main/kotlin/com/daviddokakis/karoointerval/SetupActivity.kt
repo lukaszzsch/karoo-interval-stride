@@ -337,8 +337,10 @@ class SetupActivity : AppearanceActivity() {
         const val EXTRA_FROM_RIDE = "from_ride"
         private const val RIDE_APP = "io.hammerhead.rideapp"
         private const val WIFI_SETTLE_MS = 2_000L
-        private val DAY_FORMAT = DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault())
-        private val TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
-        private val DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("EEE HH:mm", Locale.getDefault())
+        /** Day names in Polish, whatever the Karoo's language (this build's UI is Polish). */
+        private val POLISH = Locale.forLanguageTag("pl")
+        private val DAY_FORMAT = DateTimeFormatter.ofPattern("EEE d MMM", POLISH)
+        private val TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm", POLISH)
+        private val DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("EEE HH:mm", POLISH)
     }
 }

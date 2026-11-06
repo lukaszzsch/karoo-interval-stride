@@ -8,6 +8,8 @@ data class ScreenState(
     /** 3-second average power, shown as the big number. */
     val power3s: Int? = null,
     val heartRate: Int? = null,
+    /** Current cadence in rpm, or null without a cadence sensor. */
+    val cadence: Int? = null,
     /** 0-based index of the current step. */
     val stepIndex: Int = 0,
     val elapsedInStepSec: Int = 0,
@@ -99,8 +101,8 @@ data class ScreenState(
         }
     }
 
-    val target: Int? get() = currentStep?.targetAt(elapsedInStepSec)
-    val targetRange: IntRange? get() = currentStep?.rangeAt(elapsedInStepSec)
+    val target: Int? get() = currentStep?.takeIf { it.hasTarget }?.targetAt(elapsedInStepSec)
+    val targetRange: IntRange? get() = currentStep?.takeIf { it.hasTarget }?.rangeAt(elapsedInStepSec)
 }
 
 /** Tap the watts to cycle: plain → coloured number → coloured background → both → plain. */
