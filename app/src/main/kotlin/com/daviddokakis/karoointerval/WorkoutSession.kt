@@ -150,6 +150,11 @@ class WorkoutSession(
         _state.update { it.copy(wattsMode = store.wattsMode, targetShowsRange = store.targetShowsRange, lapShowsNp = store.lapShowsNp, hrShowsLap = store.hrShowsLap) }
     }
 
+    /** The ride's rating, shown with "Workout complete". */
+    fun setRatingSummary(summary: String?) {
+        _state.update { it.copy(ratingSummary = summary) }
+    }
+
     fun stop() {
         saveProgress()
         scope.cancel()

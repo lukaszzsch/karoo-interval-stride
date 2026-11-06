@@ -2,9 +2,9 @@ package com.daviddokakis.karoointerval
 
 import org.json.JSONArray
 import org.json.JSONObject
-import java.time.Instant
+import java.time.Duration
+import java.time.LocalDateTime
 import java.time.LocalDate
-import java.time.ZoneId
 import kotlin.math.roundToInt
 
 /** A planned workout as listed by Stride. */
@@ -92,6 +92,46 @@ class Stride(
         return out.sortedBy { it.date }
     }
 
+    /** What happened when putting a rating on Stride. */
+    sealed class RateResult {
+        data class Done(val activityName: String?) : RateResult()
+        /** The ride isn't on Stride yet: try again later. */
+        data object NotYet : RateResult()
+        data class Failed(val reason: String) : RateResult()
+    }
+
+    /**
+     * Finds the ride that started at [rideStart] (local time) among the athlete's activities
+     * and sets its RPE and feel (PATCH /activities/{id}, needs activities.write).
+     */
+    suspend fun rate(
+        rideStart: LocalDateTime,
+        rpe: Int?,
+        feel: Int?,
+        http: suspend (method: String, url: String, headers: Map<String, String>, body: ByteArray?) -> HttpResult,
+    ): RateResult {
+        val headers = mapOf("Authorization" to "Bearer $token", "Accept" to "application/json")
+        val list = http("GET", "$BASE/athletes/me/activities", headers, null)
+        if (list.statusCode == 401 || list.statusCode == 403) return RateResult.Failed("Stride odrzucił token (HTTP ${list.statusCode})")
+        if (list.statusCode !in 200..299) return RateResult.NotYet
+        val activities = runCatching { JSONObject(list.body).optJSONArray("activities") }.getOrNull() ?: return RateResult.NotYet
+        val id = findRide(activities, rideStart) ?: return RateResult.NotYet
+        val body = JSONObject().apply {
+            rpe?.takeIf { it in 1..10 }?.let { put("rpe", it) }
+            feel?.takeIf { it in 1..5 }?.let { put("feel", it) }
+        }.toString().toByteArray()
+        val result = http("PATCH", "$BASE/activities/$id", headers + ("Content-Type" to "application/json"), body)
+        return when (result.statusCode) {
+            in 200..299 -> RateResult.Done(runCatching { JSONObject(result.body).optString("name") }.getOrNull()?.ifBlank { null })
+            401, 403 -> RateResult.Failed(
+                runCatching { JSONObject(result.body).optString("detail") }.getOrNull()?.ifBlank { null }
+                    ?: "brak uprawnienia activities.write (HTTP ${result.statusCode})",
+            )
+            in 500..599 -> RateResult.NotYet
+            else -> RateResult.Failed("Stride zwrócił HTTP ${result.statusCode}")
+        }
+    }
+
     private fun check(result: HttpResult, what: String) {
         val code = result.statusCode
         if (code == 401) throw ApiException("Stride odrzucił token API")
@@ -110,12 +150,41 @@ class Stride(
             return type.isEmpty() || type == "RIDE" || type == "VIRTUAL_RIDE" || type == "VIRTUALRIDE"
         }
 
-        /** Local date the session is planned for (planned_at is UTC). */
+        /**
+         * Local date the session is planned for. Stride writes planned_at (and started_at) as the
+         * athlete's local wall-clock time with a Z suffix, so the date is read as written.
+         */
         private fun plannedDate(activity: JSONObject): LocalDate? {
             val at = activity.optString("planned_at").ifBlank { return null }
-            return runCatching { Instant.parse(at).atZone(ZoneId.systemDefault()).toLocalDate() }.getOrNull()
-                ?: runCatching { LocalDate.parse(at.take(10)) }.getOrNull()
+            return runCatching { LocalDate.parse(at.take(10)) }.getOrNull()
         }
+
+        /** started_at as local wall-clock time (see [plannedDate]). */
+        internal fun startedAt(activity: JSONObject): LocalDateTime? {
+            val at = activity.optString("started_at").ifBlank { return null }
+            return runCatching { LocalDateTime.parse(at.removeSuffix("Z").substringBefore('+').take(19)) }.getOrNull()
+        }
+
+        /**
+         * The recorded activity of a ride that started at [rideStart] (local time): started
+         * within 5 minutes of it, preferring the Karoo's own upload (source HAMMERHEAD). Garmin
+         * copies are skipped: Stride doesn't let other apps change them.
+         */
+        internal fun findRide(activities: JSONArray, rideStart: LocalDateTime): String? {
+            var best: Pair<String, Long>? = null
+            for (i in 0 until activities.length()) {
+                val a = activities.optJSONObject(i) ?: continue
+                if (a.optString("source").uppercase() == "GARMIN" || a.optBoolean("recording_withheld", false)) continue
+                val started = startedAt(a) ?: continue
+                val diff = Math.abs(Duration.between(rideStart, started).seconds)
+                if (diff > MATCH_SECONDS) continue
+                val score = diff + if (a.optString("source").uppercase() == "HAMMERHEAD") 0 else MATCH_SECONDS
+                if (best == null || score < best.second) best = a.optString("id") to score
+            }
+            return best?.first?.ifBlank { null }
+        }
+
+        private const val MATCH_SECONDS = 300L
 
         private fun hasSegments(workout: JSONObject): Boolean =
             (workout.optJSONArray("segments")?.length() ?: 0) > 0

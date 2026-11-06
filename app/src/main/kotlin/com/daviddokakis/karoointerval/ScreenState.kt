@@ -10,6 +10,8 @@ data class ScreenState(
     val heartRate: Int? = null,
     /** Current cadence in rpm, or null without a cadence sensor. */
     val cadence: Int? = null,
+    /** This ride's rating ("RPE 7 · Dobrze"), or null when not rated. */
+    val ratingSummary: String? = null,
     /** 0-based index of the current step. */
     val stepIndex: Int = 0,
     val elapsedInStepSec: Int = 0,

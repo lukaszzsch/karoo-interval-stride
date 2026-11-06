@@ -37,3 +37,26 @@ suspend fun KarooSystemService.karooHttpGet(
     if (error != null && complete.statusCode !in 200..599) throw NoConnectionException(error)
     return HttpResult(complete.statusCode, complete.body?.decodeToString().orEmpty())
 }
+
+/**
+ * Any request through the Karoo's network. With [waitForConnection] the Karoo holds the request
+ * until Wi-Fi or the phone is back (used for the after-ride rating sync).
+ */
+suspend fun KarooSystemService.karooHttp(
+    method: String,
+    url: String,
+    headers: Map<String, String>,
+    body: ByteArray? = null,
+    waitForConnection: Boolean = true,
+): HttpResult {
+    val complete = callbackFlow {
+        val id = addConsumer(
+            OnHttpResponse.MakeHttpRequest(method, url, headers, body, waitForConnection = waitForConnection),
+            onError = { msg -> close(NoConnectionException(msg)) },
+        ) { event: OnHttpResponse -> trySend(event.state) }
+        awaitClose { removeConsumer(id) }
+    }.filterIsInstance<HttpResponseState.Complete>().first()
+    val error = complete.error
+    if (error != null && complete.statusCode !in 200..599) throw NoConnectionException(error)
+    return HttpResult(complete.statusCode, complete.body?.decodeToString().orEmpty())
+}

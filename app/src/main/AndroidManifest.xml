@@ -38,6 +38,20 @@
             android:label="@string/app_name"
             android:theme="@style/AppTheme" />
 
+        <!-- Ride rating (RPE and feel), opened from the "Rate" notification -->
+        <activity
+            android:name=".RateActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:label="@string/rate_title"
+            android:theme="@style/AppTheme">
+            <intent-filter>
+                <action android:name="com.daviddokakis.karoointerval.stride.RATE_RIDE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <activity
             android:name=".AccountActivity"
             android:exported="false"

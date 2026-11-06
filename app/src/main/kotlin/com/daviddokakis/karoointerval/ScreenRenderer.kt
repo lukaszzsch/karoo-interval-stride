@@ -91,6 +91,14 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     private val lapHrToggleIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_LAP_HR, 14) }
     private val lapNpToggleIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_LAP_NP, 13) }
     private val wattsColorIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_WATTS_COLOR, 7) }
+    private val rateIntent: PendingIntent by lazy {
+        PendingIntent.getActivity(
+            context,
+            15,
+            Intent(context, RateActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
     private val settingsIntent: PendingIntent by lazy {
         PendingIntent.getActivity(
             context,
@@ -225,7 +233,13 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             if (karoo) v.setViewVisibility(R.id.icon_timer, View.VISIBLE)
             if (karoo) v.setViewVisibility(R.id.paused_spacer, View.GONE)
             if (s.finished) {
-                v.setTextViewText(R.id.interval_label, context.getString(R.string.workout_complete))
+                // Tap "Workout complete · Rate the ride" to rate.
+                v.setOnClickPendingIntent(R.id.interval_label, rateIntent)
+                v.setTextViewText(
+                    R.id.interval_label,
+                    listOfNotNull(context.getString(R.string.workout_complete), s.ratingSummary ?: context.getString(R.string.rate_prompt_short))
+                        .joinToString(SEP),
+                )
                 v.setTextColor(R.id.interval_label, color(R.color.watts_in_range))
             } else {
                 v.setTextViewText(R.id.interval_label, intervalLabel(s))

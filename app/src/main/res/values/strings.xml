@@ -111,6 +111,38 @@
     <string name="move_cancelled">Skok anulowany</string>
     <string name="target_range">Zakres celu</string>
 
+    <!-- Ride rating (RPE and feel), Stride's scales -->
+    <string name="rate_title">Jak było?</string>
+    <string name="rate_hint">Oceń przed „End Ride”: ocena trafia do pliku FIT i do jazdy w Stride.</string>
+    <string name="rate_rpe">Wysiłek (RPE)</string>
+    <string name="rate_feel">Samopoczucie</string>
+    <string name="rate_done">Gotowe</string>
+    <string name="rate_last_sync">Ostatnia wysyłka: %1$s</string>
+    <string name="rate_button">Oceń jazdę (RPE)</string>
+    <string name="rate_button_rated">Ocena: %1$s</string>
+    <string name="rate_prompt_short">dotknij, by ocenić</string>
+    <string name="rate_notification_header">Ocena jazdy</string>
+    <string name="rate_notification_message">Jak ciężka była ta jazda?</string>
+    <string name="rate_notification_sub">Oceń RPE przed zakończeniem jazdy</string>
+    <string name="rate_notification_action">Oceń</string>
+    <string name="rate_sync_done">%1$s wysłano do Stride</string>
+    <string name="rate_sync_failed">Nie udało się wysłać oceny do Stride: %1$s</string>
+    <string name="rate_sync_gave_up">Jazda nie pojawiła się w Stride w ciągu 12 h, ocena nie została wysłana</string>
+    <string name="rate_sync_no_token">Brak tokena Stride, ocena nie została wysłana</string>
+    <string name="feel_5">Świetnie</string>
+    <string name="feel_4">Dobrze</string>
+    <string name="feel_3">Normalnie</string>
+    <string name="feel_2">Słabo</string>
+    <string name="feel_1">Fatalnie</string>
+    <string name="rpe_1">Bardzo lekko</string>
+    <string name="rpe_2">Lekko</string>
+    <string name="rpe_3">Umiarkowanie</string>
+    <string name="rpe_4">Dość ciężko</string>
+    <string name="rpe_5">Ciężko</string>
+    <string name="rpe_7">Bardzo ciężko</string>
+    <string name="rpe_9">Ekstremalnie ciężko</string>
+    <string name="rpe_10">Maksymalny wysiłek</string>
+
     <!-- First-run introduction (Karoo menu names stay as the Karoo shows them) -->
     <string name="intro_skip">Pomiń</string>
     <string name="intro_next">Dalej</string>

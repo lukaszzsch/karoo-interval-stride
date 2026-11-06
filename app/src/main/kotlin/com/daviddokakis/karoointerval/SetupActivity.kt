@@ -183,6 +183,15 @@ class SetupActivity : AppearanceActivity() {
         }
     }
 
+    /** "Rate the ride (RPE)", or the current rating; opens the rating page. */
+    private fun rateButton() = button(
+        RatingStore.get(this).rating.value.summary(this)?.let { getString(R.string.rate_button_rated, it) }
+            ?: getString(R.string.rate_button),
+        primary = false,
+    ) {
+        startActivity(Intent(this, RateActivity::class.java))
+    }.apply { (layoutParams as LinearLayout.LayoutParams).topMargin = dp(8) }
+
     private fun wifiEnabled(): Boolean =
         runCatching { (applicationContext.getSystemService(WIFI_SERVICE) as WifiManager).isWifiEnabled }
             .getOrDefault(true)
@@ -235,6 +244,7 @@ class SetupActivity : AppearanceActivity() {
                             render()
                         }.apply { (layoutParams as LinearLayout.LayoutParams).topMargin = dp(8) },
                     )
+                    addView(rateButton())
                 },
             )
         }
