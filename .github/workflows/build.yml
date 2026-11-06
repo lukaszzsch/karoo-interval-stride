@@ -4,6 +4,9 @@ on:
   push:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -23,3 +26,12 @@ jobs:
         with:
           name: interval-screen-stride
           path: interval-screen-stride.apk
+      - name: Publish release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "build-${{ github.run_number }}" interval-screen-stride.apk \
+            --title "Interval Screen Stride (build ${{ github.run_number }})" \
+            --notes "Interval Screen for Karoo 3 with workouts from Stride. Share the .apk link to the Hammerhead Companion app to install." \
+            --latest
