@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Light palette (dark one is in values-night/). Background is white; every text colour is
+  >= 7:1 against it (WCAG AAA) and every graphic colour is >= 3:1 (WCAG 1.4.11).
+  Light-blue buttons and countdown keep dark navy text, which works in both modes.
+-->
+<resources>
+    <color name="bg">#FFFFFFFF</color>
+    <color name="tile">#FFF1EFE8</color>
+    <color name="track">#FFD3D1C7</color>
+    <color name="text">#FF0B0B0B</color>
+    <color name="text_secondary">#FF444441</color>
+
+    <color name="watts_in_range">#FF27500A</color>
+    <color name="watts_under">#FF0C447C</color>
+    <color name="watts_over">#FF791F1F</color>
+
+    <color name="power_icon">#FF854F0B</color>
+    <color name="heart_icon">#FFC62F3A</color>
+    <color name="paused">#FF633806</color>
+
+    <color name="skip_bg">#FF85B7EB</color>
+    <color name="skip_fg">#FF042C53</color>
+    <color name="countdown_bg">#FFB5D4F4</color>
+    <color name="countdown_fg">#FF042C53</color>
+    <color name="land">#FF185FA5</color>
+
+    <color name="done">#FF888780</color>
+    <!-- Workout zone colours (intervals.icu style). All >= 3:1 against white. -->
+    <color name="z1">#FF1D9E75</color>
+    <color name="z2">#FF639922</color>
+    <color name="z3">#FFBA7517</color>
+    <color name="z4">#FFD85A30</color>
+    <color name="z5">#FFE24B4A</color>
+    <!-- Lap icon purple (Karoo lap icon), >= 3:1 on the tile -->
+    <color name="lap_icon">#FF7F77DD</color>
+    <!-- Corner icons (gear, pause): muted grey, >= 3:1 against the page -->
+    <color name="icon_muted">#FF888780</color>
+    <!-- Info messages ("Move cancelled"): inverted, solid -->
+    <color name="info_bg">#FF2C2C2A</color>
+    <color name="info_fg">#FFFFFFFF</color>
+    <!-- Tonal tile (black at 8%): lets the range tint show through the Lap avg / Target tiles -->
+    <color name="tile_tonal">#14000000</color>
+    <!-- Paused box (yellow, both modes; text 10:1) and resume button (green) -->
+    <color name="paused_bg">#FFFAC775</color>
+    <color name="paused_fg">#FF412402</color>
+    <color name="resume_bg">#FF3B6D11</color>
+    <color name="confirm_wait_bg">#FF27500A</color>
+    <color name="resume_fg">#FFFFFFFF</color>
+    <!-- Pulse step: lighter green (white symbol still >= 3:1) -->
+    <color name="resume_bg_alt">#FF639922</color>
+    <!-- Fill while choosing a jump (blue) or a restart (grey); text on it stays >= 7:1 -->
+    <color name="select_fill_jump">#FFB5D4F4</color>
+    <color name="select_fill_restart">#FFD3D1C7</color>
+    <!-- Power gauge: grey arc, target range in green (>= 3:1 against the page) -->
+    <color name="gauge_track">#FFE3E1DA</color>
+    <color name="gauge_band">#FF639922</color>
+    <!-- Karoo native styling: Karoo's icon green, Karoo's button yellow (both modes, black symbol),
+         and a grey, disabled skip button while paused -->
+    <color name="karoo_green">#FF129A5E</color>
+    <color name="karoo_yellow">#FFFFE900</color>
+    <color name="karoo_yellow_alt">#FFFFF27A</color>
+    <color name="karoo_yellow_fg">#FF0B0B0B</color>
+    <color name="skip_disabled_bg">#FFE3E1DA</color>
+    <color name="skip_disabled_fg">#FF888780</color>
+    <!-- Settings page: Karoo's own segmented control (Settings → Display) and row text -->
+    <color name="segment_track">#FFF4F4F4</color>
+    <color name="segment_selected">#FF9FB3BD</color>
+    <color name="segment_text">#FF243535</color>
+    <color name="settings_title">#FF1C2E2E</color>
+    <color name="settings_help">#FF6F6F6F</color>
+    <color name="settings_divider">#FFDDDDDD</color>
+    <!-- Karoo style jumps, in the Karoo's own colours (from its ride app): its workout / lap purple
+         (purple_600, night purple_400) for the countdown, the next target's arrow and the chart's
+         jump marker; the countdown fills with the darker purple. Confirm move is Karoo yellow,
+         filling darker yellow (yellow_700) when a remote chose the jump. -->
+    <color name="karoo_purple">#FF590D80</color>
+    <color name="karoo_purple_dark">#FF36084D</color>
+    <color name="karoo_purple_fg">#FFFFFFFF</color>
+    <color name="karoo_purple_sub">#FFD9B8F0</color>
+    <color name="karoo_yellow_dark">#FFCBBA00</color>
+    <!-- Countdown (regular style): the darker blue it fills with, and "Jumping to" on the pale blue -->
+    <color name="countdown_fill">#FF85B7EB</color>
+    <color name="countdown_sub">#FF2E5A85</color>
+</resources>

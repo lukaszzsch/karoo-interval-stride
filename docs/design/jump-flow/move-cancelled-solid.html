@@ -1,0 +1,28 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Solid Move cancelled</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>:root{--font-sans:system-ui,-apple-system,"Segoe UI",sans-serif;--text-secondary:#5F5E5A;--surface-1:#F1EFE8}
+body{margin:0;padding:24px;background:#FAFAF8;font-family:var(--font-sans)}h1{font-size:18px;font-weight:500;margin:0 0 4px}p.d{margin:0 0 16px;color:#5F5E5A;font-size:14px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}</style></head><body>
+<h1>Solid Move cancelled</h1><p class="d">Move cancelled gets an opaque background so it sits above the range tint, since it's information.</p>
+<h2 class="sr-only">Mockup: Move cancelled message with a solid background that sits above the watts range tint, two options, light and dark.</h2>
+<style>
+.m{width:220px;border:2px solid #444441;border-radius:12px;box-sizing:border-box;padding:8px 7px}
+.bar{height:8px;border-radius:4px;position:relative;margin-bottom:6px}.bar i{position:absolute;left:0;top:0;bottom:0;width:55%;border-radius:4px}
+.msg{height:52px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:16px;font-weight:500}
+.cap{font-size:12px;color:var(--text-secondary);margin:5px 2px 0;max-width:220px;line-height:1.4}.col{display:flex;flex-direction:column;gap:8px}.wrap{display:flex;gap:16px;flex-wrap:wrap;padding:1rem;background:var(--surface-1);border-radius:12px}.step{font-size:12px;font-weight:500;color:var(--text-secondary);margin:0 0 -4px 2px}
+</style>
+<div class="wrap">
+<div class="col"><div class="step">Now: tonal, takes the tint</div>
+<div class="m" style="background:#B4CE95"><div class="bar" style="background:rgba(0,0,0,.08)"><i style="background:#0B0B0B"></i></div><div class="msg" style="background:rgba(0,0,0,.08);color:#0B0B0B"><i class="ti ti-info-circle" aria-hidden="true"></i>Move cancelled</div></div>
+<div class="cap">Blends in like a tile.</div></div>
+<div class="col"><div class="step">A: solid light grey</div>
+<div class="m" style="background:#B4CE95"><div class="bar" style="background:rgba(0,0,0,.08)"><i style="background:#0B0B0B"></i></div><div class="msg" style="background:#EBEBEB;color:#0B0B0B"><i class="ti ti-info-circle" aria-hidden="true"></i>Move cancelled</div></div>
+<div class="m" style="background:#000"><div class="bar" style="background:rgba(255,255,255,.12)"><i style="background:#FFF"></i></div><div class="msg" style="background:#2C2C2A;color:#FFF"><i class="ti ti-info-circle" aria-hidden="true"></i>Move cancelled</div></div>
+<div class="cap">Opaque, ignores the tint. Same grey as the tiles on white.</div></div>
+<div class="col"><div class="step">B: inverted, like a snackbar</div>
+<div class="m" style="background:#B4CE95"><div class="bar" style="background:rgba(0,0,0,.08)"><i style="background:#0B0B0B"></i></div><div class="msg" style="background:#2C2C2A;color:#FFF"><i class="ti ti-info-circle" aria-hidden="true"></i>Move cancelled</div></div>
+<div class="m" style="background:#000"><div class="bar" style="background:rgba(255,255,255,.12)"><i style="background:#FFF"></i></div><div class="msg" style="background:#EBEBEB;color:#0B0B0B"><i class="ti ti-info-circle" aria-hidden="true"></i>Move cancelled</div></div>
+<div class="cap">Dark on light, light on dark: clearly a message, not a tile.</div></div>
+</div>
+
+</body></html>

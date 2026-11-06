@@ -1,0 +1,63 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Power gauge in Karoo style</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>:root{--font-sans:system-ui,-apple-system,"Segoe UI",sans-serif;--text-secondary:#5F5E5A;--surface-1:#F1EFE8}
+body{margin:0;padding:24px;background:#FAFAF8;font-family:var(--font-sans)}h1{font-size:18px;font-weight:500;margin:0 0 4px}p.d{margin:0 0 16px;color:#5F5E5A;font-size:14px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}</style></head><body>
+<h1>Power gauge in Karoo style</h1><p class="d">Current gauge vs Karoo-native style: IBM Plex Sans Condensed, uppercase labels with green icons, Karoo green, no tile backgrounds, yellow skip button. Not approved.</p>
+<style>@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Sans:wght@400;700&display=swap');</style>
+<div id="row" style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;padding:1rem;background:var(--surface-1);border-radius:12px"></div>
+<script>
+const T={light:{bg:'#ffffff',tx:'#0b0b0b',sec:'#444441',trk:'#e3e1da',tile:'#ebebeb',band:'#639922',accent:'#129A5E',line:'#888888',chartgrid:'#dddddd',prev:'#d3d1c7'},
+dark:{bg:'#000000',tx:'#ffffff',sec:'#d3d1c7',trk:'#3a3a38',tile:'#222222',band:'#7DB548',accent:'#1DB872',line:'#666666',chartgrid:'#2c2c2c',prev:'#444441'}};
+const SW=34,A0=160,A1=20,cx=240,cy=348,R=192;
+const pt=(a,r)=>[cx+r*Math.cos(a*Math.PI/180),cy-r*Math.sin(a*Math.PI/180)];
+const arc=(a,b,r)=>{const [x0,y0]=pt(a,r),[x1,y1]=pt(b,r);return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`};
+const PLEX="'IBM Plex Sans',sans-serif", COND="'IBM Plex Sans Condensed',sans-serif";
+const heartFill='M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z';
+function lap(x,y,col){return `<g transform="translate(${x} ${y})"><path d="M11 -3 A11 11 0 1 1 5 -9.7" fill="none" stroke="${col}" stroke-width="3.2" stroke-linecap="round"/><path d="M1 -15 L10 -11 L3 -4 Z" fill="${col}"/></g>`}
+function bolt(x,y,col){return `<path transform="translate(${x-8} ${y-13})" d="M10 0 L1 15 H8 L6 26 L15 10 H8 Z" fill="${col}"/>`}
+function heartOutline(x,y,col){return `<path transform="translate(${x-12} ${y-12})" d="${heartFill}" fill="none" stroke="${col}" stroke-width="2.4"/>`}
+function target(x,y,col){return `<g fill="none" stroke="${col}" stroke-width="2.6"><circle cx="${x}" cy="${y}" r="10"/><circle cx="${x}" cy="${y}" r="4.5"/></g>`}
+function timer(x,y,col){return `<g fill="none" stroke="${col}" stroke-width="2.6" stroke-linecap="round"><circle cx="${x}" cy="${y+2}" r="10"/><path d="M${x} ${y+2} V${y-4} M${x-4} ${y-12} H${x+4}"/></g>`}
+function chart(c){const bars=[[60,'#1f9e75'],[95,'#c4821f'],[105,'#c4821f'],[118,'#d9582c'],[60,'#1f9e75'],[95,'#c4821f'],[105,'#c4821f'],[118,'#d9582c'],[60,'#1f9e75'],[95,'#c4821f'],[105,'#c4821f'],[118,'#d9582c'],[60,'#1f9e75'],[75,'#5e9a2a']];
+ let bx=20,bh='';bars.forEach(([h,col],i)=>{bh+=`<rect x="${bx}" y="${760-h*0.5}" width="28" height="${h*0.5}" fill="${i==0?c.trk:col}"/>`;bx+=32});
+ return `<line x1="16" y1="700" x2="464" y2="700" stroke="${c.chartgrid}"/><line x1="16" y1="730" x2="464" y2="730" stroke="${c.chartgrid}"/>${bh}<path d="M34 676 L34 768" stroke="${c.tx}" stroke-width="3"/><path d="M24 672 L44 672 L34 684 Z" fill="${c.tx}"/>`}
+function head(c){return `<rect width="480" height="800" fill="${c.bg}"/><text x="460" y="48" text-anchor="end" font-family="${PLEX}" font-size="44" fill="${c.tx}">07:43</text>
+ <g fill="none" stroke="${c.sec}" stroke-width="4"><circle cx="32" cy="98" r="11"/><circle cx="32" cy="98" r="19" stroke-dasharray="7 5"/></g>
+ <rect x="438" y="84" width="7" height="28" rx="3" fill="${c.sec}"/><rect x="452" y="84" width="7" height="28" rx="3" fill="${c.sec}"/>`}
+function gauge(c,w,lo,hi,band,font,fw,fs){const tgt=(lo+hi)/2,half=Math.max(tgt*0.1,(hi-lo)/2*4),min=tgt-half,max=tgt+half;
+ const ang=v=>A0-(Math.min(max,Math.max(min,v))-min)/(max-min)*(A0-A1);
+ const [nx0,ny0]=pt(ang(w),R-SW/2-6),[nx1,ny1]=pt(ang(w),R+SW/2+6);
+ return `<path d="${arc(A0,A1,R)}" fill="none" stroke="${c.trk}" stroke-width="${SW}" stroke-linecap="round"/><path d="${arc(ang(lo),ang(hi),R)}" fill="none" stroke="${band}" stroke-width="${SW}" stroke-linecap="round"/>
+ <line x1="${nx0}" y1="${ny0}" x2="${nx1}" y2="${ny1}" stroke="${c.bg}" stroke-width="18" stroke-linecap="round"/><line x1="${nx0}" y1="${ny0}" x2="${nx1}" y2="${ny1}" stroke="${c.tx}" stroke-width="10" stroke-linecap="round"/>
+ <text x="240" y="340" text-anchor="middle" font-family="${font}" font-weight="${fw}" font-size="${fs}" fill="${c.tx}">${w}</text>`}
+function skipBtn(x,y,s,fill,fg){return `<rect x="${x}" y="${y}" width="${s}" height="${s}" rx="12" fill="${fill}"/><g transform="translate(${x+s/2} ${y+s/2}) scale(${s/68})"><path d="M-12 -18 L11 0 L-12 18 Z M17 -18 v36" fill="none" stroke="${fg}" stroke-width="3.5" stroke-linejoin="round"/></g>`}
+function prevBtn(x,y,s,fill,fg){return `<rect x="${x}" y="${y}" width="${s}" height="${s}" rx="12" fill="${fill}"/><g transform="translate(${x+s/2} ${y+s/2}) scale(${-s/68} ${s/68})"><path d="M-12 -18 L11 0 L-12 18 Z M17 -18 v36" fill="none" stroke="${fg}" stroke-width="3.5" stroke-linejoin="round"/></g>`}
+function current(c,w){return head(c)+`
+ <text x="240" y="84" text-anchor="middle" font-family="${PLEX}" font-size="22" fill="${c.sec}">Target</text>
+ <text x="240" y="118" text-anchor="middle" font-family="${PLEX}" font-weight="700" font-size="34" fill="${c.tx}">293 – 308</text>`+gauge(c,w,293,308,c.band,PLEX,700,150)+`
+ <text x="16" y="414" font-family="${PLEX}" font-weight="700" font-size="26" fill="${c.sec}">Interval 1 / 16</text><text x="464" y="418" text-anchor="end" font-family="${PLEX}" font-weight="700" font-size="58" fill="${c.tx}">2:05</text>
+ <rect x="16" y="436" width="448" height="12" rx="6" fill="${c.trk}"/><rect x="16" y="436" width="250" height="12" rx="6" fill="${c.tx}"/>
+ <rect x="16" y="464" width="218" height="98" rx="14" fill="${c.tile}"/><rect x="246" y="464" width="218" height="98" rx="14" fill="${c.tile}"/>
+ <text x="32" y="498" font-family="${PLEX}" font-size="22" fill="${c.sec}">Lap avg</text><text x="32" y="546" font-family="${PLEX}" font-weight="700" font-size="44" fill="${c.tx}">304</text>
+ <path transform="translate(262 482) scale(0.9)" d="${heartFill}" fill="#C62F3A"/><text x="288" y="498" font-family="${PLEX}" font-size="22" fill="${c.sec}">HR</text><text x="262" y="546" font-family="${PLEX}" font-weight="700" font-size="44" fill="${c.tx}">137</text>
+ <rect x="17" y="576" width="446" height="88" rx="14" fill="none" stroke="${c.line}" stroke-width="2"/>`+prevBtn(28,586,68,c.prev,c.tx)+`
+ <text x="240" y="608" text-anchor="middle" font-family="${PLEX}" font-size="22" fill="${c.sec}">Next up</text><text x="240" y="646" text-anchor="middle" font-family="${PLEX}" font-weight="700" font-size="32" fill="${c.tx}">1m @ 181W</text>`+skipBtn(384,586,68,'#85B7EB','#042C53')+chart(c)}
+function native(c,w){return head(c)+`
+ ${target(196,80,c.accent)}<text x="214" y="88" font-family="${COND}" font-weight="500" font-size="24" fill="${c.tx}">TARGET</text>
+ <text x="240" y="128" text-anchor="middle" font-family="${COND}" font-weight="500" font-size="40" fill="${c.tx}">293 – 308</text>`+gauge(c,w,293,308,c.accent,COND,500,178)+`
+ ${timer(28,400,c.accent)}<text x="48" y="410" font-family="${COND}" font-weight="500" font-size="24" fill="${c.tx}">INTERVAL 1 / 16</text>
+ <text x="464" y="424" text-anchor="end" font-family="${COND}" font-weight="500" font-size="72" fill="${c.tx}">2:05</text>
+ <rect x="16" y="440" width="448" height="8" fill="${c.trk}"/><rect x="16" y="440" width="250" height="8" fill="${c.tx}"/>
+ ${lap(18,486,c.accent)}${bolt(52,486,c.accent)}<text x="228" y="494" text-anchor="end" font-family="${COND}" font-weight="500" font-size="24" fill="${c.tx}">LAP AVG</text>
+ <text x="228" y="560" text-anchor="end" font-family="${COND}" font-weight="500" font-size="68" fill="${c.tx}">304</text>
+ ${heartOutline(264,486,c.tx)}<text x="464" y="494" text-anchor="end" font-family="${COND}" font-weight="500" font-size="24" fill="${c.tx}">HR</text>
+ <text x="464" y="560" text-anchor="end" font-family="${COND}" font-weight="500" font-size="68" fill="${c.tx}">137</text>
+ <line x1="240" y1="470" x2="240" y2="562" stroke="${c.trk}" stroke-width="2"/>`+prevBtn(16,590,64,c.prev,c.tx)+`
+ <text x="240" y="608" text-anchor="middle" font-family="${COND}" font-weight="500" font-size="22" fill="${c.sec}">NEXT UP</text><text x="240" y="648" text-anchor="middle" font-family="${COND}" font-weight="500" font-size="36" fill="${c.tx}">1m @ 181W</text>`+skipBtn(400,590,64,'#FFE900','#0b0b0b')+chart(c)}
+function phone(fn,mode,w,label){return `<div style="text-align:center"><svg viewBox="0 0 480 800" width="250" style="border-radius:22px;display:block;border:6px solid #222" role="img"><title>${label}</title>${fn(T[mode],w)}</svg><div style="font-size:13px;color:var(--text-secondary);margin-top:8px">${label}</div></div>`}
+function draw(){document.getElementById('row').innerHTML=phone(current,'light',310,'Current gauge')+phone(native,'light',310,'Karoo style, light')+phone(native,'dark',290,'Karoo style, dark')}
+draw(); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(draw);
+</script>
+
+</body></html>

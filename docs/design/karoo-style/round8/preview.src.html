@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Free ride: bigger LAP TIME</title>
+<style>
+  @font-face { font-family: PlexCond; src: url(__FONT_COND__); font-weight: 500; }
+  :root { color-scheme: dark; }
+  body { background:#2A2A2A; color:#E8E6E1; font:14px/1.45 -apple-system, "Helvetica Neue", Arial, sans-serif; margin:0; padding:28px 16px; }
+  h1 { font-size:18px; font-weight:500; margin:0 0 4px; text-align:center; }
+  p.d { color:#A9A6A0; margin:0 auto 22px; max-width:780px; text-align:center; }
+  .devices { display:flex; flex-wrap:wrap; justify-content:center; gap:30px; }
+  .dev { display:grid; justify-items:center; gap:8px; }
+  .cap { color:#A9A6A0; font-size:13px; max-width:240px; text-align:center; }
+</style>
+</head>
+<body>
+<h1>Free ride (Karoo style): LAP TIME at box-label size</h1>
+<p class="d">Drawn on Karoo 3 screenshots of the current build. "LAP TIME" and its icon now match LAP AVG / HR in the boxes
+(15sp label, 12dp icon), and the row is centred on the lap time instead of sharing its baseline.</p>
+<div class="devices" id="devices"></div>
+<div class="devices" id="zoom" style="margin-top:30px"></div>
+
+<script>/*__KAROO_DEVICE_JS__*/</script>
+<script>
+const FRAME = "__FRAME__";
+const SHOTS = { light: "__SHOT_light__", dark: "__SHOT_dark__" };
+const LAP = new Path2D('M12,4A8,8 0,1 0,17.66 6.34 M9.5,1.5L12,4L9.5,6.5');
+// Measured on the device screenshots (px, 480 wide): box label "LAP AVG" is 15sp = 28px Plex Condensed,
+// box icons 12dp = 22px; the lap time's digits run y 452-485, so their middle is ~468.
+function bigger(theme) {
+  return ctx => {
+    const bg = theme === 'dark' ? '#0B0B0B' : '#FFFFFF', tx = theme === 'dark' ? '#FFFFFF' : '#0B0B0B', green = theme === 'dark' ? '#1DB872' : '#129A5E';
+    const px = ctx.getImageData(300, 470, 1, 1).data;           // the screen's own background colour
+    ctx.fillStyle = `rgb(${px[0]},${px[1]},${px[2]})`; ctx.fillRect(8, 445, 330, 50);   // clear the old icon + label
+    const mid = 468.5, size = 28, caps = 0.698 * size;          // Plex Condensed cap height
+    // ic_lap at the boxes' size: its circle fills ~2/3 of the 24-unit box, so draw it 30 units wide to match the device icon
+    ctx.save(); ctx.translate(14, mid - 13); ctx.scale(26 / 24, 26 / 24);
+    ctx.strokeStyle = green; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke(LAP); ctx.restore();
+    ctx.font = `500 ${size}px PlexCond`; ctx.fillStyle = tx; ctx.textBaseline = 'alphabetic';
+    ctx.fillText('LAP TIME', 46, mid + caps / 2);
+  };
+}
+(async () => {
+  await document.fonts.load('500 20px PlexCond');
+  const box = document.getElementById('devices'), zb = document.getElementById('zoom');
+  for (const t of ['light', 'dark']) {
+    const dev = await KarooDevice.load({ frame: FRAME, screen: SHOTS[t] });
+    const now = dev.screen({}), next = dev.screen({ draw: bigger(t) });
+    for (const [scr, cap] of [[now, `Now (${t})`], [next, `Proposed (${t})`]]) {
+      const d = document.createElement('div'); d.className = 'dev'; d.append(dev.device(scr, 240));
+      const c = document.createElement('div'); c.className = 'cap'; c.textContent = cap; d.append(c); box.append(d);
+    }
+    if (t === 'light') for (const [scr, cap] of [[now, 'Now, 1.5×'], [next, 'Proposed, 1.5×']]) {
+      const d = document.createElement('div'); d.className = 'dev'; d.append(dev.crop(scr, [0, 430, 480, 140], 1.5));
+      const c = document.createElement('div'); c.className = 'cap'; c.textContent = cap; d.append(c); zb.append(d);
+    }
+  }
+})();
+</script>
+</body>
+</html>

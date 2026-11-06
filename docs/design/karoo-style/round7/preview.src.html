@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Free ride in Karoo style</title>
+<style>
+  @font-face { font-family: PlexCond; src: url(__FONT_COND__); font-weight: 500; }
+  @font-face { font-family: Plex; src: url(__FONT_REG__); font-weight: 400; }
+  @font-face { font-family: Plex; src: url(__FONT_MED__); font-weight: 500; }
+  :root { color-scheme: dark; }
+  body { background:#2A2A2A; color:#E8E6E1; font:14px/1.45 -apple-system, "Helvetica Neue", Arial, sans-serif; margin:0; padding:28px 16px; }
+  h1 { font-size:18px; font-weight:500; margin:0 0 4px; text-align:center; }
+  p.d { color:#A9A6A0; margin:0 auto 22px; max-width:780px; text-align:center; }
+  .devices { display:flex; flex-wrap:wrap; justify-content:center; gap:30px; }
+  .dev { display:grid; justify-items:center; gap:8px; }
+  .cap { color:#A9A6A0; font-size:13px; max-width:240px; text-align:center; }
+</style>
+</head>
+<body>
+<h1>Free ride (no workout) in Karoo style</h1>
+<p class="d">Drawn on a Karoo 3 screenshot of the free-ride screen. Watts first and centred, a "LAP TIME" row,
+then Lap avg and HR as full-size Karoo data fields (Karoo's own label and number typography, HR tinted by its
+zone), and Last lap at the bottom between the Karoo's buttons. Close-up next to Karoo's own fields below.</p>
+<div class="devices" id="devices"></div>
+
+<script>/*__KAROO_DEVICE_JS__*/</script>
+<script>
+const FRAME = "__FRAME__";
+const SHOTS = { free: "__SHOT_free-ride__", workout: "__SHOT_workout__", native: "__SHOT_native__" };
+// The app's own colours (values/ and values-night/): text, tonal tile, Karoo green, heart, HR zone tints.
+const LIGHT = { bg: '#FFFFFF', tx: '#0B0B0B', sec: '#444441', tile: '#EBEBEB', green: '#129A5E', outline: '#888780', red: '#C62F3A',
+  hr: { 1: '#CCE0F6', 2: '#CDE9CE', 3: '#FBF2C8', 4: '#F9D8D1', 5: '#F8CACC' } };
+const DARK = { bg: '#0B0B0B', tx: '#FFFFFF', sec: '#D3D1C7', tile: '#282828', green: '#1DB872', outline: '#5F5E5A', red: '#FF5C66',
+  hr: { 1: '#2C425B', 2: '#2D4C2D', 3: '#484223', 4: '#5F3931', 5: '#5E292B' } };
+let C = LIGHT;
+// Dark mode, simulated from the light screenshot: greys flip (white <-> black), colours stay.
+async function darkVersion(src) {
+  const im = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = src; });
+  const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+  const ctx = c.getContext('2d'); ctx.drawImage(im, 0, 0);
+  const d = ctx.getImageData(0, 0, c.width, c.height), p = d.data;
+  for (let i = 0; i < p.length; i += 4) {
+    const mx = Math.max(p[i], p[i + 1], p[i + 2]), mn = Math.min(p[i], p[i + 1], p[i + 2]);
+    if (mx === 0 || (mx - mn) / mx < 0.12) { p[i] = 255 - p[i]; p[i + 1] = 255 - p[i + 1]; p[i + 2] = 255 - p[i + 2]; }
+  }
+  ctx.putImageData(d, 0, 0); return c.toDataURL();
+}
+const P = {
+  lap: new Path2D('M12,4A8,8 0,1 0,17.66 6.34 M9.5,1.5L12,4L9.5,6.5'),
+  bolt: new Path2D('M13,2v8h6l-8,12v-8H5l8,-12z'),
+  heart: new Path2D('M19.5,12.572L12,20l-7.5,-7.428A5,5 0,1 1,12 6.006a5,5 0,1 1,7.5 6.572'),
+  timer: new Path2D('M12,6a7.5,7.5 0,1 1,0 15a7.5,7.5 0,1 1,0 -15z M12,13.5V10 M9.5,2.5h5'),
+};
+function icon(ctx, p, x, y, size, color, fill) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(size / 24, size / 24); ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  if (fill) { ctx.fillStyle = color; ctx.fill(p); ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.stroke(p); } else { ctx.strokeStyle = color; ctx.stroke(p); }
+  ctx.restore();
+}
+function rrect(ctx, x, y, w, h, r, fill, stroke) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 2; ctx.stroke(); } }
+function label(ctx, s, x, y, align = 'left', size = 24, color = C.tx) { ctx.font = `500 ${size}px PlexCond`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'alphabetic'; ctx.fillText(s, x, y); }
+function num(ctx, s, x, y, size, align = 'left') {
+  ctx.save(); ctx.scale(0.9, 1); ctx.font = `500 ${size}px Plex`; ctx.letterSpacing = `${-0.05 * size}px`;
+  ctx.fillStyle = C.tx; ctx.textAlign = align; ctx.textBaseline = 'alphabetic'; ctx.fillText(s, x / 0.9, y); ctx.restore();
+}
+// Karoo's own field numbers: Plex Sans Regular, 90% wide, a little tighter (measured on the device).
+function numNative(ctx, s, x, y, size, align = 'right') {
+  ctx.save(); ctx.scale(0.9, 1); ctx.font = `400 ${size}px Plex`; ctx.letterSpacing = `${-0.05 * size}px`;
+  ctx.fillStyle = C.tx; ctx.textAlign = align; ctx.textBaseline = 'alphabetic'; ctx.fillText(s, x / 0.9, y); ctx.restore();
+}
+function numW(ctx, s, size) { ctx.save(); ctx.font = `500 ${size}px Plex`; ctx.letterSpacing = `${-0.05 * size}px`; const w = ctx.measureText(s).width * 0.9; ctx.restore(); return w; }
+function bold(ctx, s, x, y, size, align) { ctx.font = `500 ${size}px PlexCond`; ctx.fillStyle = C.tx; ctx.textAlign = align; ctx.fillText(s, x, y); ctx.fillText(s, x + 0.8, y); }
+
+// Free ride has no Next up box or chart, so its blocks sit lower and the cells are full Karoo
+// data-field size (145 px tall, 15sp labels, 48sp values), with Last lap at the bottom between the
+// Karoo's own buttons.
+function freeRide(zone, theme = LIGHT) {
+  return ctx => {
+    C = theme;
+    ctx.fillStyle = C.bg; ctx.fillRect(0, 126, 480, 800 - 126);
+    const base = 512, cy = 534, ch = 145;
+    // watts: capped, centred between the top row and the lap row
+    const top = 112, rowCaps = base - 17; let f = 200; while (numW(ctx, '306', f) > 448) f -= 2;
+    num(ctx, '306', 240, (top + rowCaps + 0.71 * f) / 2, f, 'center');
+    // lap row: "LAP TIME" left, the lap time right, on one baseline
+    icon(ctx, P.lap, 16, base - 8 - 12, 24, C.green);
+    label(ctx, 'LAP TIME', 46, base);
+    num(ctx, '7:16', 464, base, 44, 'right');
+    // cells at Karoo data-field size: label caps 20 px, icons 22 px, 12 px insets, 90 px values
+    rrect(ctx, 16, cy, 221, ch, 14, C.tile);
+    icon(ctx, P.lap, 28, cy + 11, 22, C.green); icon(ctx, P.bolt, 54, cy + 11, 22, C.green, true);
+    label(ctx, 'LAP AVG', 225, cy + 32, 'right', 28); numNative(ctx, '302', 225, cy + ch - 22, 90);
+    rrect(ctx, 243, cy, 221, ch, 14, zone ? C.hr[zone] : C.tile);
+    icon(ctx, P.heart, 255, cy + 11, 22, C.red, true);
+    label(ctx, 'HR', 452, cy + 32, 'right', 28); numNative(ctx, '109', 452, cy + ch - 22, 90);
+    // Last lap at the bottom, between the Karoo's back and next buttons
+    label(ctx, 'LAST LAP', 240, 720, 'center', 21, C.sec);
+    bold(ctx, '8:20 · 271 W', 240, 758, 36, 'center');
+  };
+}
+const KEEP = [ctx => ctx.roundRect(-50, 683, 150, 100, 50), ctx => ctx.roundRect(380, 683, 150, 100, 50)];
+
+(async () => {
+  for (const w of ['400 20px Plex', '500 20px Plex', '500 20px PlexCond']) await document.fonts.load(w);
+  const load = s => KarooDevice.load({ frame: FRAME, screen: s });
+  const [fr, wk, nat, frDark] = await Promise.all([load(SHOTS.free), load(SHOTS.workout), load(SHOTS.native), load(await darkVersion(SHOTS.free))]);
+  const items = [
+    [fr, fr.screen({}), 'Free ride now (same in both styles)'],
+    [fr, fr.screen({ draw: freeRide(1), keepOnTop: KEEP }), 'Free ride in Karoo style (HR zone 1 tint)'],
+    [fr, fr.screen({ draw: freeRide(4), keepOnTop: KEEP }), 'Same, in HR zone 4'],
+    [frDark, frDark.screen({ draw: freeRide(1, DARK), keepOnTop: KEEP }), 'Dark mode, HR zone 1'],
+    [frDark, frDark.screen({ draw: freeRide(4, DARK), keepOnTop: KEEP }), 'Dark mode, HR zone 4'],
+    [wk, wk.screen({}), 'Workout screen in Karoo style, for comparison'],
+  ];
+  const box = document.getElementById('devices');
+  for (const [dev, scr, cap] of items) {
+    const d = document.createElement('div'); d.className = 'dev'; d.append(dev.device(scr, 240));
+    const t = document.createElement('div'); t.className = 'cap'; t.textContent = cap; d.append(t); box.append(d);
+  }
+  const zb = document.createElement('div'); zb.className = 'devices'; zb.style.marginTop = '30px'; document.body.append(zb);
+  for (const [dev, scr, rect, cap] of [[nat, nat.screen({}), [0, 210, 480, 150], 'Karoo\u2019s own fields, 1.5×'], [fr, items[1][1], [0, 530, 480, 152], 'Our Lap avg and HR cells, 1.5×']]) {
+    const d = document.createElement('div'); d.className = 'dev'; d.append(dev.crop(scr, rect, 1.5));
+    const t = document.createElement('div'); t.className = 'cap'; t.textContent = cap; d.append(t); zb.append(d);
+  }
+})();
+</script>
+</body>
+</html>

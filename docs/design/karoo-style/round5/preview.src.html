@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Countdown and Move cancelled</title>
+<style>
+  @font-face { font-family: PlexCond; src: url(__FONT_COND__); font-weight: 500; }
+  @font-face { font-family: Plex; src: url(__FONT_REG__); font-weight: 400; }
+  @font-face { font-family: Plex; src: url(__FONT_MED__); font-weight: 500; }
+  :root { color-scheme: dark; }
+  body { background:#2A2A2A; color:#E8E6E1; font:14px/1.45 -apple-system, "Helvetica Neue", Arial, sans-serif; margin:0; padding:28px 16px; }
+  h1 { font-size:18px; font-weight:500; margin:0 0 4px; text-align:center; }
+  p.d { color:#A9A6A0; margin:0 auto 22px; max-width:780px; text-align:center; }
+  .devices { display:flex; flex-wrap:wrap; justify-content:center; gap:30px; }
+  .dev { display:grid; justify-items:center; gap:8px; }
+  .cap { color:#A9A6A0; font-size:13px; max-width:240px; text-align:center; }
+  .zooms { display:flex; flex-wrap:wrap; justify-content:center; gap:24px; margin-top:30px; }
+</style>
+</head>
+<body>
+<h1>Countdown and "Move cancelled"</h1>
+<p class="d">Drawn on Karoo 3 screenshots. Countdown: the number left and the step (time @ watts) right, both centred in
+the box, the step bold like Next up. Three options for how the countdown stands out. "Move cancelled": icon and text
+centred together in the box.</p>
+<div class="devices" id="devices"></div>
+<div class="zooms" id="zooms"></div>
+
+<script>/*__KAROO_DEVICE_JS__*/</script>
+<script>
+const FRAME = "__FRAME__";
+const SHOTS = { countdown: "__SHOT_countdown__", cancelled: "__SHOT_move-cancelled__" };
+const BOX = { x: 16, y: 574, w: 448, h: 90 };
+const MID = BOX.y + BOX.h / 2;
+function rrect(ctx, x, y, w, h, r, fill) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fillStyle = fill; ctx.fill(); }
+// Numbers in Karoo style: Plex Sans Medium, 90% wide, a little tighter.
+function num(ctx, s, x, y, size, color, align = 'left') {
+  ctx.save(); ctx.scale(0.9, 1); ctx.font = `500 ${size}px Plex`; ctx.letterSpacing = `${-0.05 * size}px`;
+  ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'alphabetic'; ctx.fillText(s, x / 0.9, y); ctx.restore();
+}
+// The step, bold like Next up's (condensed font, fake bold as Android draws it).
+function step(ctx, s, x, y, size, color) {
+  ctx.font = `500 ${size}px PlexCond`; ctx.fillStyle = color; ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText(s, x, y); ctx.fillText(s, x - 0.8, y);
+}
+// A countdown box: number left, step right, both centred on the box's middle line.
+function countdown(fill, fg, sub) {
+  return ctx => {
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(BOX.x - 2, BOX.y - 2, BOX.w + 4, BOX.h + 4);
+    rrect(ctx, BOX.x, BOX.y, BOX.w, BOX.h, 14, fill);
+    const n = 62; num(ctx, '4', BOX.x + 26, MID + 0.71 * n / 2, n, fg);
+    ctx.font = '500 20px PlexCond'; ctx.fillStyle = sub; ctx.textAlign = 'right'; ctx.fillText('JUMPING TO', BOX.x + BOX.w - 22, MID - 14);
+    step(ctx, '5m @ 330W', BOX.x + BOX.w - 22, MID + 22, 36, fg);
+  };
+}
+// Option C: the box as option B, and a tint behind the top of the screen while counting down.
+function countdownTint(ctx) {
+  const g = ctx.createLinearGradient(0, 60, 0, 570);
+  g.addColorStop(0, 'rgba(133,183,235,0)'); g.addColorStop(0.35, 'rgba(133,183,235,0.55)'); g.addColorStop(1, 'rgba(133,183,235,0)');
+  ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = g; ctx.fillRect(0, 60, 480, 510); ctx.restore();
+  countdown('#185FA5', '#FFFFFF', '#CFE1F5')(ctx);
+}
+// "Move cancelled": icon and text centred together, on the box's middle line.
+function cancelled(ctx) {
+  const b = { x: 16, y: 461, w: 448, h: 100 }, mid = b.y + b.h / 2;
+  rrect(ctx, b.x, b.y, b.w, b.h, 14, '#2C2C2A');
+  ctx.font = '500 32px PlexCond'; const tw = ctx.measureText('MOVE CANCELLED').width, iw = 30, gap = 12, x0 = 240 - (iw + gap + tw) / 2;
+  ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.arc(x0 + iw / 2, mid, iw / 2 - 1.5, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = '#FFFFFF'; ctx.fillRect(x0 + iw / 2 - 1.4, mid - 2, 2.8, 10); ctx.beginPath(); ctx.arc(x0 + iw / 2, mid - 7, 1.9, 0, Math.PI * 2); ctx.fill();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillText('MOVE CANCELLED', x0 + iw + gap, mid + 0.7 * 32 / 2);
+}
+const KEEP = [ctx => ctx.roundRect(-50, 683, 150, 100, 50), ctx => ctx.roundRect(380, 683, 150, 100, 50)];
+
+(async () => {
+  for (const w of ['400 20px Plex', '500 20px Plex', '500 20px PlexCond']) await document.fonts.load(w);
+  const load = s => KarooDevice.load({ frame: FRAME, screen: s });
+  const [cd, mc] = await Promise.all([load(SHOTS.countdown), load(SHOTS.cancelled)]);
+  const items = [
+    [cd, cd.screen({}), 'Now'],
+    [cd, cd.screen({ draw: countdown('#0B0B0B', '#FFFFFF', '#B4B2A9'), keepOnTop: KEEP }), 'A: inverted (black, like ⏭)'],
+    [cd, cd.screen({ draw: countdown('#185FA5', '#FFFFFF', '#CFE1F5'), keepOnTop: KEEP }), 'B: solid blue'],
+    [cd, cd.screen({ draw: countdownTint, keepOnTop: KEEP }), 'C: solid blue + a blue tint behind the screen'],
+    [mc, mc.screen({ draw: cancelled, keepOnTop: KEEP }), '"Move cancelled": centred'],
+  ];
+  const box = document.getElementById('devices');
+  for (const [dev, scr, cap] of items) {
+    const d = document.createElement('div'); d.className = 'dev'; d.append(dev.device(scr, 240));
+    const t = document.createElement('div'); t.className = 'cap'; t.textContent = cap; d.append(t); box.append(d);
+  }
+  const z = document.getElementById('zooms');
+  for (const [dev, scr, rect, cap] of [[cd, items[0][1], [0, 560, 480, 120], 'Now, 1.5×'], [cd, items[1][1], [0, 560, 480, 120], 'A, 1.5×'],
+                                        [mc, mc.screen({}), [0, 450, 480, 120], 'Move cancelled now, 1.5×'], [mc, items[4][1], [0, 450, 480, 120], 'Centred, 1.5×']]) {
+    const d = document.createElement('div'); d.className = 'dev'; d.append(dev.crop(scr, rect, 1.5));
+    const t = document.createElement('div'); t.className = 'cap'; t.textContent = cap; d.append(t); z.append(d);
+  }
+})();
+</script>
+</body>
+</html>

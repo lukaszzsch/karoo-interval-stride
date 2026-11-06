@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Dark-mode heart rate zone tints: ~32% of the zone colour over the dark tile (yellow 20%, so the
+  red heart stays >= 3:1). White text >= 7:1, red heart >= 3.2:1 on every tint.
+-->
+<resources>
+    <color name="hr_z1">#FF2C425B</color>
+    <color name="hr_z2">#FF2D4C2D</color>
+    <color name="hr_z3">#FF484223</color>
+    <color name="hr_z4">#FF5F3931</color>
+    <color name="hr_z5">#FF5E292B</color>
+</resources>

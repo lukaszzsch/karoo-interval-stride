@@ -1,0 +1,24 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Confirm move and cancel</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>:root{--font-sans:system-ui,-apple-system,"Segoe UI",sans-serif;--text-secondary:#5F5E5A;--surface-1:#F1EFE8}
+body{margin:0;padding:24px;background:#FAFAF8;font-family:var(--font-sans)}h1{font-size:18px;font-weight:500;margin:0 0 4px}p.d{margin:0 0 16px;color:#5F5E5A;font-size:14px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}</style></head><body>
+<h1>Confirm move and cancel</h1><p class="d">Final: confirm-only choosing, Confirm move + ✕ in place of the tiles, ✕ on the countdown.</p>
+<style>
+.m{width:240px;border:2px solid #444441;border-radius:12px;box-sizing:border-box;padding:8px 7px;text-align:left}
+.L{background:#FFF;color:#0B0B0B}.D{background:#000;color:#FFF}
+.act{display:flex;gap:6px;height:48px;margin-bottom:6px}.conf{flex:1;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:500}.x{width:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.box{border-radius:6px;height:48px;box-sizing:border-box;display:flex;align-items:stretch;border:1px solid #888780}
+.tl{width:56px;display:flex;align-items:center;padding-left:7px;flex:none;box-sizing:border-box}.tr{width:56px;display:flex;align-items:center;justify-content:flex-end;padding-right:7px;flex:none;box-sizing:border-box}
+.ob{width:34px;height:34px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}.lab{font-size:10px;margin-bottom:4px}.val{font-size:15px;font-weight:500}
+.cd{border-radius:6px;height:48px;display:flex;align-items:center;background:#B5D4F4;color:#042C53;padding-left:12px}.xb{width:34px;height:34px;border-radius:6px;background:#042C53;color:#B5D4F4;display:flex;align-items:center;justify-content:center;margin:0 7px 0 auto}
+.cap{font-size:12px;color:#5F5E5A;margin:5px 2px 0;max-width:240px;line-height:1.4}.col{display:flex;flex-direction:column}.wrap{display:flex;gap:16px;flex-wrap:wrap;padding:1rem;background:#F1EFE8;border-radius:12px}.step{font-size:12px;font-weight:500;color:#5F5E5A;margin:0 0 4px 2px}
+</style>
+<div class="wrap">
+<div class="col"><div class="step">Choosing (light)</div><div class="m L"><div class="act"><div class="conf" style="background:#3B6D11;color:#FFF"><i class="ti ti-check"></i>Confirm move</div><div class="x" style="background:#D3D1C7"><i class="ti ti-x"></i></div></div><div class="box"><div class="tl"><div class="ob" style="background:#D3D1C7"><i class="ti ti-player-skip-back"></i></div></div><div class="mid"><div class="lab" style="color:#444441">Jumping 2 ahead</div><div class="val">10m @ 181W</div></div><div class="tr"><div class="ob" style="background:#85B7EB;color:#042C53"><i class="ti ti-player-skip-forward"></i></div></div></div></div><div class="cap">Confirm move + ✕ replace the tiles. Nothing moves until Confirm; cancels itself after 10 s.</div></div>
+<div class="col"><div class="step">Choosing (dark)</div><div class="m D"><div class="act"><div class="conf" style="background:#97C459;color:#173404"><i class="ti ti-check"></i>Confirm move</div><div class="x" style="background:#444441;color:#FFF"><i class="ti ti-x"></i></div></div><div class="box"><div class="tl"><div class="ob" style="background:#444441;color:#fff"><i class="ti ti-player-skip-back"></i></div></div><div class="mid"><div class="lab" style="color:#D3D1C7">Jumping 2 ahead</div><div class="val">10m @ 181W</div></div><div class="tr"><div class="ob" style="background:#85B7EB;color:#042C53"><i class="ti ti-player-skip-forward"></i></div></div></div></div></div>
+<div class="col"><div class="step">Countdown with ✕</div><div class="m L"><div class="cd"><span style="font-size:32px;font-weight:500">4</span><span style="flex:1;text-align:right;font-size:18px;font-weight:500;margin-right:10px">10m @ 181W</span><div class="xb" style="margin:0 7px 0 0"><i class="ti ti-x"></i></div></div></div><div class="cap">✕ = cancel, nothing moves. Tap the rest = start right away.</div></div>
+</div>
+
+</body></html>

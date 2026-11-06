@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Confirmation fill behind the Next up box while choosing a jump (colour set from code:
+     blue for "Jumping to", grey for "Restarting interval"). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/select_fill_jump" />
+    <corners android:radius="6dp" />
+</shape>

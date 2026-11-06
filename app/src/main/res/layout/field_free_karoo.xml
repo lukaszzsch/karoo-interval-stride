@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Free ride (no workout loaded) with KAROO NATIVE STYLING. Same ids as field_free.xml.
+  Watts first (Plex Sans Medium, 90% wide, capped at 107sp, centred), a "LAP TIME" row like the
+  workout screen's interval row, then Lap avg and HR as full-size Karoo data fields (77dp ≈ 145 px,
+  Karoo's own label and number typography; HR tinted by its zone), and Last lap at the bottom,
+  between the Karoo's own back and next buttons.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/field_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingStart="8dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="8dp">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <TextView
+                android:id="@+id/free_watts"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_marginBottom="-8dp"
+                android:autoSizeMaxTextSize="107sp"
+                android:autoSizeMinTextSize="32sp"
+                android:autoSizeStepGranularity="2sp"
+                android:autoSizeTextType="uniform"
+                android:fontFamily="sans-serif"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:letterSpacing="-0.05"
+                android:maxLines="1"
+                android:paddingTop="24dp"
+                android:textColor="@color/text"
+                android:textScaleX="0.9" />
+        </FrameLayout>
+
+        <!-- Lap row: "LAP TIME" and its icon at the boxes' label size (15sp, 12dp icon), centred
+             on the lap time's height -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:baselineAligned="false"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/th_free_karoo_1"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:layout_marginEnd="3dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_lap"
+                android:tint="@color/karoo_green" />
+
+            <TextView
+                android:id="@+id/th_free_karoo_2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="ibm-plex-sans-condensed"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="@string/lap_time"
+                android:textAllCaps="true"
+                android:textColor="@color/text"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/free_lap_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif"
+                android:includeFontPadding="false"
+                android:letterSpacing="-0.05"
+                android:textColor="@color/text"
+                android:textScaleX="0.9"
+                android:textSize="23sp" />
+        </LinearLayout>
+
+        <!-- Not shown in Karoo style (the row says "LAP TIME"); kept so the code can fill it -->
+        <TextView
+            android:id="@+id/free_lap_number"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
+
+        <!-- Lap avg and HR as full-size Karoo data fields: 15sp caps labels, 12dp icons on the
+             capitals (baseline 11dp), values in Karoo's number font (Plex Sans Regular, 90% wide)
+             at 48sp, pinned to the bottom-right. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="77dp"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <FrameLayout
+                android:id="@+id/free_lap_tile"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="3dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_tile_tonal"
+                android:paddingHorizontal="6dp"
+                android:paddingTop="6dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:baselineAligned="true"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/th_free_karoo_3"
+                        android:layout_width="12dp"
+                        android:layout_height="12dp"
+                        android:layout_marginEnd="3dp"
+                        android:baseline="11dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_lap"
+                        android:tint="@color/karoo_green" />
+
+                    <ImageView
+                        android:id="@+id/th_free_karoo_4"
+                        android:layout_width="12dp"
+                        android:layout_height="12dp"
+                        android:layout_marginEnd="3dp"
+                        android:baseline="11dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_bolt_filled"
+                        android:tint="@color/karoo_green" />
+
+                    <TextView
+                        android:id="@+id/free_lap_label"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="ibm-plex-sans-condensed"
+                        android:gravity="end"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:textAllCaps="true"
+                        android:textColor="@color/text"
+                        android:textSize="15sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/free_lap_avg"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|end"
+                    android:layout_marginBottom="-2dp"
+                    android:fontFamily="sans-serif-light"
+                    android:includeFontPadding="false"
+                    android:letterSpacing="-0.05"
+                    android:maxLines="1"
+                    android:textColor="@color/text"
+                    android:textScaleX="0.9"
+                    android:textSize="48sp" />
+            </FrameLayout>
+
+            <FrameLayout
+                android:id="@+id/free_hr_tile"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="3dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_tile_tonal"
+                android:paddingHorizontal="6dp"
+                android:paddingTop="6dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:baselineAligned="true"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/free_hr_icon"
+                        android:layout_width="12dp"
+                        android:layout_height="12dp"
+                        android:layout_marginEnd="3dp"
+                        android:baseline="11dp"
+                        android:contentDescription="@string/cd_heart_rate"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_heart" />
+
+                    <TextView
+                        android:id="@+id/free_hr_label"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="ibm-plex-sans-condensed"
+                        android:gravity="end"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:text="@string/hr"
+                        android:textAllCaps="true"
+                        android:textColor="@color/text"
+                        android:textSize="15sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/free_hr"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|end"
+                    android:layout_marginBottom="-2dp"
+                    android:fontFamily="sans-serif-light"
+                    android:includeFontPadding="false"
+                    android:letterSpacing="-0.05"
+                    android:maxLines="1"
+                    android:textColor="@color/text"
+                    android:textScaleX="0.9"
+                    android:textSize="48sp" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <!-- Last lap at the bottom, between the Karoo's own back and next buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingBottom="10dp">
+
+            <TextView
+                android:id="@+id/th_free_karoo_5"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="ibm-plex-sans-condensed"
+                android:includeFontPadding="false"
+                android:text="@string/last_lap_label"
+                android:textAllCaps="true"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp" />
+
+            <!-- Fits between the Karoo's back and next buttons (150dp), shrinking if needed -->
+            <TextView
+                android:id="@+id/free_last_lap"
+                android:layout_width="150dp"
+                android:layout_height="24dp"
+                android:layout_marginTop="3dp"
+                android:autoSizeMaxTextSize="19sp"
+                android:autoSizeMinTextSize="11sp"
+                android:autoSizeStepGranularity="1sp"
+                android:autoSizeTextType="uniform"
+                android:fontFamily="ibm-plex-sans-condensed"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:textColor="@color/text"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Workouts (gear), top left. No pause: without a workout there's no interval timer. -->
+    <FrameLayout
+        android:id="@+id/free_btn_settings"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="top|start">
+
+        <ImageView
+            android:id="@+id/th_free_karoo_6"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="top|start"
+            android:layout_marginStart="4dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="4dp"
+            android:alpha="0.55"
+            android:contentDescription="@string/cd_settings"
+            android:src="@drawable/ic_settings"
+            android:tint="@color/text" />
+    </FrameLayout>
+</FrameLayout>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Skip button while the ride or workout is paused (Karoo native styling): grey, not tappable. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/skip_disabled_bg" />
+    <corners android:radius="8dp" />
+</shape>

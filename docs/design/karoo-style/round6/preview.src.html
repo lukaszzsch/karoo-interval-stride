@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Karoo colours for jumps</title>
+<style>
+  @font-face { font-family: PlexCond; src: url(__FONT_COND__); font-weight: 500; }
+  @font-face { font-family: Plex; src: url(__FONT_REG__); font-weight: 400; }
+  @font-face { font-family: Plex; src: url(__FONT_MED__); font-weight: 500; }
+  :root { color-scheme: dark; }
+  body { background:#2A2A2A; color:#E8E6E1; font:14px/1.45 -apple-system, "Helvetica Neue", Arial, sans-serif; margin:0; padding:28px 16px; }
+  h1 { font-size:18px; font-weight:500; margin:0 0 4px; text-align:center; }
+  p.d { color:#A9A6A0; margin:0 auto 22px; max-width:780px; text-align:center; }
+  .devices { display:flex; flex-wrap:wrap; justify-content:center; gap:30px; }
+  .dev { display:grid; justify-items:center; gap:8px; }
+  .cap { color:#A9A6A0; font-size:13px; max-width:240px; text-align:center; }
+</style>
+</head>
+<body>
+<h1>Karoo colours for jumps</h1>
+<p class="d">Drawn on Karoo 3 screenshots, in the Karoo's own colours from its ride app: yellow (#FFE900, its action
+colour) for Confirm move, and its workout / lap purple (#590D80) for the countdown.</p>
+<div class="devices" id="devices"></div>
+
+<script>/*__KAROO_DEVICE_JS__*/</script>
+<script>
+const FRAME = "__FRAME__";
+const SHOTS = { confirm: "__SHOT_confirm__", countdown: "__SHOT_countdown__" };
+const YELLOW = '#FFE900', YELLOW_DARK = '#CBBA00', PURPLE = '#590D80', PURPLE_LIGHT = '#D9B8F0';
+function rrect(ctx, x, y, w, h, r, fill) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fillStyle = fill; ctx.fill(); }
+function num(ctx, s, x, y, size, color) {
+  ctx.save(); ctx.scale(0.9, 1); ctx.font = `500 ${size}px Plex`; ctx.letterSpacing = `${-0.05 * size}px`;
+  ctx.fillStyle = color; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillText(s, x / 0.9, y); ctx.restore();
+}
+function bold(ctx, s, x, y, size, color, align) {
+  ctx.font = `500 ${size}px PlexCond`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'alphabetic';
+  ctx.fillText(s, x, y); ctx.fillText(s, x + (align === 'right' ? -0.8 : 0.8), y);
+}
+// Confirm move in Karoo yellow, black check and text. [left] = seconds left when a remote button
+// chose the jump (the button fills darker yellow as it confirms itself).
+function confirm(left) {
+  return ctx => {
+    const b = { x: 117, y: 461, w: 347, h: 101 }, mid = b.y + b.h / 2;
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(b.x - 1, b.y - 1, b.w + 2, b.h + 2);
+    rrect(ctx, b.x, b.y, b.w, b.h, 14, YELLOW);
+    if (left) { ctx.save(); ctx.beginPath(); ctx.roundRect(b.x, b.y, b.w, b.h, 14); ctx.clip(); ctx.fillStyle = YELLOW_DARK; ctx.fillRect(b.x, b.y, b.w * (5 - left + 1) / 5, b.h); ctx.restore(); }
+    const label = left ? `CONFIRMING… ${left}` : 'CONFIRM MOVE';
+    ctx.font = '500 34px PlexCond'; const tw = ctx.measureText(label).width, iw = 30, gap = 14, x0 = 290 - (iw + gap + tw) / 2;
+    ctx.strokeStyle = '#0B0B0B'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(x0 + 2, mid); ctx.lineTo(x0 + 11, mid + 9); ctx.lineTo(x0 + 28, mid - 9); ctx.stroke();
+    bold(ctx, label, x0 + iw + gap, mid + 0.7 * 34 / 2, 34, '#0B0B0B', 'left');
+  };
+}
+// Countdown in the Karoo's workout purple: number left, "JUMPING TO" + step right (as Next up).
+// Countdown in the Karoo's workout purple: number left, "JUMPING TO" + step right (as Next up).
+// The box fills with the Karoo's darker purple (#36084D) as the seconds run down (5 s countdown).
+const PURPLE_DARK = '#36084D';
+function countdown(left = 4) {
+  return ctx => {
+    const b = { x: 16, y: 574, w: 448, h: 90 }, mid = b.y + b.h / 2;
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(b.x - 2, b.y - 2, b.w + 4, b.h + 4);
+    rrect(ctx, b.x, b.y, b.w, b.h, 14, PURPLE);
+    ctx.save(); ctx.beginPath(); ctx.roundRect(b.x, b.y, b.w, b.h, 14); ctx.clip();
+    ctx.fillStyle = PURPLE_DARK; ctx.fillRect(b.x, b.y, b.w * (5 - left + 1) / 5, b.h); ctx.restore();
+    num(ctx, String(left), b.x + 24, mid + 0.71 * 58 / 2, 58, '#FFFFFF');
+    ctx.font = '500 21px PlexCond'; ctx.fillStyle = PURPLE_LIGHT; ctx.textAlign = 'right'; ctx.fillText('JUMPING TO', b.x + b.w - 22, mid - 12);
+    bold(ctx, '1m @ 181W', b.x + b.w - 22, mid + 26, 38, '#FFFFFF', 'right');
+  };
+}
+// Everything else that marks the coming jump turns purple too: the "→ 181" next target and the
+// chart's marker / landing step (blue now). Recolours the blue pixels in those areas.
+function jumpPurple(ctx, areas) {
+  for (const [x, y, w, h] of areas) {
+    const d = ctx.getImageData(x, y, w, h), p = d.data;
+    for (let i = 0; i < p.length; i += 4) {
+      const r = p[i], g = p[i + 1], b = p[i + 2];
+      if (b > r + 50 && b > g + 25) {               // a blue pixel: keep its depth, make it purple
+        const t = (255 - (r + g + b) / 3) / 255;    // 0 = white .. 1 = dark
+        p[i] = Math.round(255 - t * (255 - 0x59) * 1.15); p[i + 1] = Math.round(255 - t * (255 - 0x0D) * 1.15); p[i + 2] = Math.round(255 - t * (255 - 0x80) * 1.15);
+        for (let k = 0; k < 3; k++) p[i + k] = Math.max(0, Math.min(255, p[i + k]));
+      }
+    }
+    ctx.putImageData(d, x, y);
+  }
+}
+const CHART = [0, 668, 480, 110], TARGET_NEXT = [250, 500, 220, 60];
+// The Target cell during a jump: "300 → 181". A: the next target in the text colour, only the
+// arrow purple. B: "→ 181" as white text on a small purple pill.
+function numW(ctx, t, size) { ctx.font = `500 ${size}px Plex`; ctx.letterSpacing = `${-0.05 * size}px`; return ctx.measureText(t).width * 0.9; }
+function targetNext(variant) {
+  return ctx => {
+    ctx.fillStyle = '#EBEBEB'; ctx.fillRect(268, 503, 192, 52);
+    const base = 548, right = 452, big = 52, small = 32;
+    let x = right;
+    if (variant === 'A') {
+      const w = numW(ctx, '181', small); num(ctx, '181', x - w, base, small, '#0B0B0B'); x -= w + 6;
+      ctx.strokeStyle = PURPLE; ctx.lineWidth = 3.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      const ay = base - 11; ctx.beginPath(); ctx.moveTo(x - 20, ay); ctx.lineTo(x - 2, ay); ctx.moveTo(x - 9, ay - 7); ctx.lineTo(x - 2, ay); ctx.lineTo(x - 9, ay + 7); ctx.stroke();
+      x -= 28;
+    } else {
+      const w = numW(ctx, '181', small), pw = w + 40, ph = 36, py = base - 29;
+      rrect(ctx, x - pw, py, pw, ph, 8, PURPLE);
+      num(ctx, '181', x - 8 - w, base - 4, small, '#FFFFFF');
+      ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2.8; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      const ay = base - 15, ax = x - 14 - w; ctx.beginPath(); ctx.moveTo(ax - 18, ay); ctx.lineTo(ax - 2, ay); ctx.moveTo(ax - 8, ay - 6); ctx.lineTo(ax - 2, ay); ctx.lineTo(ax - 8, ay + 6); ctx.stroke();
+      x -= pw + 8;
+    }
+    const w3 = numW(ctx, '300', big); num(ctx, '300', x - w3, base, big, '#0B0B0B');
+  };
+}
+const KEEP = [ctx => ctx.roundRect(-50, 683, 150, 100, 50), ctx => ctx.roundRect(380, 683, 150, 100, 50)];
+
+(async () => {
+  for (const w of ['400 20px Plex', '500 20px Plex', '500 20px PlexCond']) await document.fonts.load(w);
+  const load = s => KarooDevice.load({ frame: FRAME, screen: s });
+  const [cf, cd] = await Promise.all([load(SHOTS.confirm), load(SHOTS.countdown)]);
+  const items = [
+    [cf, cf.screen({}), 'Confirm move now (green)'],
+    [cf, cf.screen({ draw: ctx => { confirm(0)(ctx); jumpPurple(ctx, [CHART]); }, keepOnTop: KEEP }), 'Confirm move in Karoo yellow, jump marker purple'],
+    [cf, cf.screen({ draw: ctx => { confirm(3)(ctx); jumpPurple(ctx, [CHART]); }, keepOnTop: KEEP }), 'Chosen with a remote: fills darker yellow, confirms itself'],
+    [cd, cd.screen({}), 'Countdown now (inverted)'],
+    [cd, cd.screen({ draw: ctx => { countdown(4)(ctx); jumpPurple(ctx, [CHART, TARGET_NEXT]); }, keepOnTop: KEEP }), 'Countdown at 4: darker purple fills 2/5 of the box'],
+    [cd, cd.screen({ draw: ctx => { countdown(2)(ctx); jumpPurple(ctx, [CHART, TARGET_NEXT]); }, keepOnTop: KEEP }), 'Countdown at 2: fills 4/5, almost there'],
+    [cd, cd.screen({ draw: ctx => { countdown(4)(ctx); jumpPurple(ctx, [CHART]); targetNext('A')(ctx); }, keepOnTop: KEEP }), 'Next target A: "181" in black, only the arrow purple'],
+    [cd, cd.screen({ draw: ctx => { countdown(4)(ctx); jumpPurple(ctx, [CHART]); targetNext('B')(ctx); }, keepOnTop: KEEP }), 'Next target B: "→ 181" white on a purple pill'],
+  ];
+  const box = document.getElementById('devices');
+  const zooms = [[items[4][1], 'Purple text (previous preview), 1.6×'], [items[6][1], 'A, 1.6×'], [items[7][1], 'B, 1.6×']];
+  for (const [dev, scr, cap] of items) {
+    const d = document.createElement('div'); d.className = 'dev'; d.append(dev.device(scr, 240));
+    const t = document.createElement('div'); t.className = 'cap'; t.textContent = cap; d.append(t); box.append(d);
+  }
+  const zb = document.createElement('div'); zb.className = 'devices'; zb.style.marginTop = '30px'; document.body.append(zb);
+  for (const [scr, cap] of zooms) {
+    const d = document.createElement('div'); d.className = 'dev'; d.append(cd.crop(scr, [240, 455, 240, 112], 1.6));
+    const t = document.createElement('div'); t.className = 'cap'; t.textContent = cap; d.append(t); zb.append(d);
+  }
+})();
+</script>
+</body>
+</html>

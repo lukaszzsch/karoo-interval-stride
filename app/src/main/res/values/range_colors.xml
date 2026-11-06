@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Background tints for the third watts mode (below / in / above the target range).
+  Light mode: 48% of the zone colour over white. Black text >= 10:1, secondary text >= 5:1.
+  The "_clear" versions are the same colour fully transparent, for the fades.
+-->
+<resources>
+    <color name="range_bg_under">#FF9FC7EF</color>
+    <color name="range_bg_under_clear">#009FC7EF</color>
+    <color name="range_bg_in">#FFB4CE95</color>
+    <color name="range_bg_in_clear">#00B4CE95</color>
+    <color name="range_bg_over">#FFF1A9A8</color>
+    <color name="range_bg_over_clear">#00F1A9A8</color>
+</resources>

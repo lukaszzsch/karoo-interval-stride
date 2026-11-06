@@ -1,0 +1,28 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tonal progress bar</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>:root{--font-sans:system-ui,-apple-system,"Segoe UI",sans-serif;--text-secondary:#5F5E5A;--surface-1:#F1EFE8}
+body{margin:0;padding:24px;background:#FAFAF8;font-family:var(--font-sans)}h1{font-size:18px;font-weight:500;margin:0 0 4px}p.d{margin:0 0 16px;color:#5F5E5A;font-size:14px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}</style></head><body>
+<h1>Tonal progress bar</h1><p class="d">The unfilled part of the interval bar uses the tiles' tonal wash instead of solid grey.</p>
+<h2 class="sr-only">Mockup: the unfilled part of the interval progress bar uses the same tonal wash as the tiles, now and proposed, on white, green range tint and black.</h2>
+<style>
+.m{width:240px;border:2px solid #444441;border-radius:12px;box-sizing:border-box;padding:8px 7px 7px}
+.row{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-bottom:4px}.row b{font-size:22px;font-weight:500}
+.bar{height:8px;border-radius:4px;position:relative;margin-bottom:6px}.bar i{position:absolute;left:0;top:0;bottom:0;width:55%;border-radius:4px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:6px;height:52px}.tile{border-radius:6px;padding:5px 8px;box-sizing:border-box}.tl{font-size:11px}.tv{font-size:22px;font-weight:500;line-height:1.2}
+.cap{font-size:12px;color:var(--text-secondary);margin:5px 2px 0;max-width:240px;line-height:1.4}.col{display:flex;flex-direction:column;gap:8px}.wrap{display:flex;gap:16px;flex-wrap:wrap;padding:1rem;background:var(--surface-1);border-radius:12px}.step{font-size:12px;font-weight:500;color:var(--text-secondary);margin:0 0 -4px 2px}
+</style>
+<div class="wrap">
+<div class="col"><div class="step">Now: solid grey track</div>
+<div class="m" style="background:#B4CE95;color:#0B0B0B"><div class="row"><span>Interval 2 / 16</span><b>1:49</b></div><div class="bar" style="background:#D3D1C7"><i style="background:#0B0B0B"></i></div><div class="tiles"><div class="tile" style="background:rgba(0,0,0,.08)"><div class="tl">Lap avg</div><div class="tv">298</div></div><div class="tile" style="background:rgba(0,0,0,.08)"><div class="tl">Target</div><div class="tv">300</div></div></div></div>
+<div class="cap">On a range tint the grey track doesn't match the tiles.</div></div>
+<div class="col"><div class="step">New: tonal track (in range)</div>
+<div class="m" style="background:#B4CE95;color:#0B0B0B"><div class="row"><span>Interval 2 / 16</span><b>1:49</b></div><div class="bar" style="background:rgba(0,0,0,.08)"><i style="background:#0B0B0B"></i></div><div class="tiles"><div class="tile" style="background:rgba(0,0,0,.08)"><div class="tl">Lap avg</div><div class="tv">298</div></div><div class="tile" style="background:rgba(0,0,0,.08)"><div class="tl">Target</div><div class="tv">300</div></div></div></div>
+<div class="m" style="background:#FFF;color:#0B0B0B"><div class="row"><span>Interval 2 / 16</span><b>1:49</b></div><div class="bar" style="background:rgba(0,0,0,.08)"><i style="background:#0B0B0B"></i></div><div class="tiles"><div class="tile" style="background:rgba(0,0,0,.08)"><div class="tl">Lap avg</div><div class="tv">298</div></div><div class="tile" style="background:rgba(0,0,0,.08)"><div class="tl">Target</div><div class="tv">300</div></div></div></div>
+<div class="cap">Same tonal wash as the tiles, so it takes the tint behind it.</div></div>
+<div class="col"><div class="step">New: dark</div>
+<div class="m" style="background:#000;color:#FFF"><div class="row"><span>Interval 2 / 16</span><b>1:49</b></div><div class="bar" style="background:rgba(255,255,255,.12)"><i style="background:#FFF"></i></div><div class="tiles"><div class="tile" style="background:rgba(255,255,255,.12)"><div class="tl">Lap avg</div><div class="tv">298</div></div><div class="tile" style="background:rgba(255,255,255,.12)"><div class="tl">Target</div><div class="tv">300</div></div></div></div>
+<div class="cap">Only the interval bar changes. The ⏮ button and the free-ride divider keep their grey.</div></div>
+</div>
+
+</body></html>

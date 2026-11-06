@@ -1,0 +1,30 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jump flow</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>:root{--font-sans:system-ui,-apple-system,"Segoe UI",sans-serif;--text-secondary:#5F5E5A;--surface-1:#F1EFE8}
+body{margin:0;padding:24px;background:#FAFAF8;font-family:var(--font-sans)}h1{font-size:18px;font-weight:500;margin:0 0 4px}p.d{margin:0 0 16px;color:#5F5E5A;font-size:14px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}</style></head><body>
+<h1>Jump flow</h1><p class="d">Choosing a target, confirmation fill, countdown and cancelling.</p>
+<style>
+.m{width:240px;border:2px solid #444441;border-radius:12px;box-sizing:border-box;padding:8px 7px;text-align:left}
+.L{background:#FFF;color:#0B0B0B}.D{background:#000;color:#FFF}
+.box{position:relative;border-radius:6px;height:48px;box-sizing:border-box;display:flex;align-items:stretch;overflow:hidden;border:1px solid #888780}
+.fill{position:absolute;left:0;top:0;bottom:0}
+.tl{width:56px;display:flex;align-items:center;padding-left:7px;flex:none;box-sizing:border-box;position:relative}
+.tr{width:56px;display:flex;align-items:center;justify-content:flex-end;padding-right:7px;flex:none;box-sizing:border-box;position:relative}
+.ob{width:34px;height:34px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.mid{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.1;position:relative}
+.lab{font-size:10px;margin-bottom:4px}.val{font-size:15px;font-weight:500;white-space:nowrap}
+.cd{border-radius:6px;height:48px;display:flex;align-items:center;gap:12px;padding:0 12px;background:#B5D4F4;color:#042C53}
+.step{font-size:12px;font-weight:500;color:#5F5E5A;margin:0 0 4px 2px}
+.cap{font-size:12px;color:#5F5E5A;margin:5px 2px 0;max-width:240px;line-height:1.4}
+.col{display:flex;flex-direction:column}.wrap{display:flex;gap:16px;flex-wrap:wrap;padding:1rem;background:#F1EFE8;border-radius:12px}
+.sh{outline:2px dashed #E24B4A;outline-offset:-3px}
+</style><div class="wrap">
+<div class="col"><div class="step">1. Tap ⏭</div><div class="m L"><div class="box"><div class="fill" style="width:33%;background:#B5D4F4"></div><div class="tl"><div class="ob" style="background:#D3D1C7"><i class="ti ti-player-skip-back"></i></div></div><div class="mid "><div class="lab" style="color:#444441">Jumping to</div><div class="val">5m @ 330W</div></div><div class="tr"><div class="ob" style="background:#85B7EB;color:#042C53"><i class="ti ti-player-skip-forward"></i></div></div></div></div><div class="cap">Fill grows behind the box; every tap restarts it.</div></div>
+<div class="col"><div class="step">Single ⏮</div><div class="m L"><div class="box"><div class="fill" style="width:33%;background:#D3D1C7"></div><div class="tl"><div class="ob" style="background:#D3D1C7"><i class="ti ti-player-skip-back"></i></div></div><div class="mid "><div class="lab" style="color:#444441">Restarting interval</div><div class="val">5m @ 297W</div></div><div class="tr"><div class="ob" style="background:#85B7EB;color:#042C53"><i class="ti ti-player-skip-forward"></i></div></div></div></div><div class="cap">Back to the start of the current interval (grey fill).</div></div>
+<div class="col"><div class="step">2. Fill complete → countdown</div><div class="m L"><div class="cd"><span style="font-size:32px;font-weight:500">5</span><span style="flex:1;text-align:right;font-size:18px;font-weight:500">5m @ 330W</span></div></div><div class="cap">5 → 1 with beeps, then the jump. Tap it to start right away.</div></div>
+<div class="col"><div class="step">Cancel: tap the middle</div><div class="m L"><div class="box"><div class="fill" style="width:66%;background:#B5D4F4"></div><div class="tl"><div class="ob" style="background:#D3D1C7"><i class="ti ti-player-skip-back"></i></div></div><div class="mid sh"><div class="lab" style="color:#444441">Jumping to</div><div class="val">5m @ 330W</div></div><div class="tr"><div class="ob" style="background:#85B7EB;color:#042C53"><i class="ti ti-player-skip-forward"></i></div></div></div></div><div class="cap">While choosing, tapping the text cancels. Tapping back to the current interval cancels too.</div></div>
+<div class="col"><div class="step">Dark mode</div><div class="m D"><div class="box"><div class="fill" style="width:33%;background:#1F3A57"></div><div class="tl"><div class="ob" style="background:#444441;color:#fff"><i class="ti ti-player-skip-back"></i></div></div><div class="mid "><div class="lab" style="color:#D3D1C7">Jumping to</div><div class="val">5m @ 330W</div></div><div class="tr"><div class="ob" style="background:#85B7EB;color:#042C53"><i class="ti ti-player-skip-forward"></i></div></div></div></div></div>
+</div>
+
+</body></html>

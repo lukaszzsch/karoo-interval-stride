@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Range tint: one soft vertical fade, strongest at the middle of the watts (35% down the upper part)
+  and fading out gently towards the top edge and the tiles.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:centerColor="@color/range_bg_in"
+        android:centerY="0.35"
+        android:endColor="@color/range_bg_in_clear"
+        android:startColor="@color/range_bg_in_clear"
+        android:type="linear" />
+</shape>

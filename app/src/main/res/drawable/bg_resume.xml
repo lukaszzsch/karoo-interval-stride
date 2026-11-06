@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Green half-pill behind the resume symbol: rounded on the left, flat on the right (screen edge). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/resume_bg" />
+    <corners
+        android:bottomLeftRadius="22dp"
+        android:bottomRightRadius="0dp"
+        android:topLeftRadius="22dp"
+        android:topRightRadius="0dp" />
+</shape>

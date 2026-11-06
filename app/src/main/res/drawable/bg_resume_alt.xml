@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Second step of the resume button's pulse: same half-pill in the alternate green. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/resume_bg_alt" />
+    <corners
+        android:bottomLeftRadius="22dp"
+        android:bottomRightRadius="0dp"
+        android:topLeftRadius="22dp"
+        android:topRightRadius="0dp" />
+</shape>

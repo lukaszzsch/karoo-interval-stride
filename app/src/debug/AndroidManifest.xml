@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds only: lets adb fake a remote button press for testing. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <receiver
+            android:name=".DebugRemoteReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.daviddokakis.karoointerval.DEBUG_REMOTE" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

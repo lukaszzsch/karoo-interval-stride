@@ -1,0 +1,14 @@
+.gradle/
+build/
+build.nosync/
+local.properties
+.idea/
+*.iml
+.DS_Store
+captures/
+.kotlin/
+
+# Release signing key and its passwords: never commit these
+keystore.properties
+*.jks
+*.keystore

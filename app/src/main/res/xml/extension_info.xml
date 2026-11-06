@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ExtensionInfo
+    displayName="@string/extension_name"
+    icon="@drawable/ic_interval"
+    id="intervalscreenstride"
+    scansDevices="false">
+
+    <DataType
+        description="@string/field_description"
+        displayName="@string/field_name"
+        graphical="true"
+        icon="@drawable/ic_interval"
+        typeId="interval-screen" />
+
+    <!-- Assign these to a controller button (e.g. a remote) in the Karoo settings -->
+    <BonusAction
+        actionId="skip"
+        displayName="@string/action_skip" />
+    <BonusAction
+        actionId="previous"
+        displayName="@string/action_previous" />
+    <BonusAction
+        actionId="pause"
+        displayName="@string/action_pause" />
+</ExtensionInfo>

@@ -1,0 +1,54 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Power gauge (calmer)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>:root{--font-sans:system-ui,-apple-system,"Segoe UI",sans-serif;--text-secondary:#5F5E5A;--surface-1:#F1EFE8}
+body{margin:0;padding:24px;background:#FAFAF8;font-family:var(--font-sans)}h1{font-size:18px;font-weight:500;margin:0 0 4px}p.d{margin:0 0 16px;color:#5F5E5A;font-size:14px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}</style></head><body>
+<h1>Power gauge (calmer)</h1><p class="d">Current layout vs a calmer one: fewer text sizes, quieter target, solid needle, smaller icons, no box around Next up, even spacing.</p>
+<div id="row" style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;padding:1rem;background:var(--surface-1);border-radius:12px"></div>
+<script>
+const T={dark:{bg:'#111821',tx:'#ffffff',sec:'#aeb5bf',trk:'#38414d',green:'#62b04f',line:'#5b6370',hair:'#2a313b',chartgrid:'#2c333d'},
+light:{bg:'#ffffff',tx:'#111111',sec:'#555555',trk:'#e3e3e3',green:'#5cb85c',line:'#888888',hair:'#e6e6e6',chartgrid:'#dddddd'}};
+const SW=34,A0=160,A1=20,cx=240,cy=348,R=192;
+const pt=(a,r)=>[cx+r*Math.cos(a*Math.PI/180),cy-r*Math.sin(a*Math.PI/180)];
+const arc=(a,b,r)=>{const [x0,y0]=pt(a,r),[x1,y1]=pt(b,r);return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`};
+const heart='M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z';
+function lapIcon(x,y,col,s){return `<g transform="translate(${x} ${y}) scale(${s})"><path d="M13 -4 A13 13 0 1 1 6 -11.5" fill="none" stroke="${col}" stroke-width="3.5" stroke-linecap="round"/><path d="M2 -17 L12 -13 L4 -5 Z" fill="${col}"/></g>`}
+function avgIcon(x,y,col,s){return `<g transform="translate(${x} ${y}) scale(${s})" fill="none" stroke="${col}" stroke-width="3.5" stroke-linecap="round"><circle r="11"/><line x1="-13" y1="13" x2="13" y2="-13"/></g>`}
+function chart(c){const bars=[[60,'#1f9e75'],[95,'#c4821f'],[105,'#c4821f'],[118,'#d9582c'],[60,'#1f9e75'],[95,'#c4821f'],[105,'#c4821f'],[118,'#d9582c'],[60,'#1f9e75'],[95,'#c4821f'],[105,'#c4821f'],[118,'#d9582c'],[60,'#1f9e75'],[75,'#5e9a2a']];
+ let bx=20,bh='';bars.forEach(([h,col],i)=>{const bw=i==13?60:28;bh+=`<rect x="${bx}" y="${760-h*0.5}" width="${bw}" height="${h*0.5}" fill="${i==0?c.trk:col}"/>`;bx+=bw+4});
+ return `<line x1="16" y1="700" x2="464" y2="700" stroke="${c.chartgrid}"/><line x1="16" y1="730" x2="464" y2="730" stroke="${c.chartgrid}"/>${bh}<path d="M76 676 L76 768" stroke="${c.tx}" stroke-width="3"/><path d="M66 672 L86 672 L76 684 Z" fill="${c.tx}"/>`}
+function head(c){return `<rect width="480" height="800" fill="${c.bg}"/><text x="460" y="48" text-anchor="end" font-size="44" font-weight="500" fill="${c.tx}">20:26</text>
+ <g fill="none" stroke="${c.sec}" stroke-width="4"><circle cx="32" cy="98" r="11"/><circle cx="32" cy="98" r="19" stroke-dasharray="7 5"/></g>
+ <rect x="438" y="84" width="7" height="28" rx="3" fill="${c.sec}"/><rect x="452" y="84" width="7" height="28" rx="3" fill="${c.sec}"/>`}
+function gauge(c,w,lo,hi,calm){const tgt=(lo+hi)/2,min=tgt*0.75,max=tgt*1.25;
+ const ang=v=>A0-(Math.min(max,Math.max(min,v))-min)/(max-min)*(A0-A1);
+ const [nx0,ny0]=pt(ang(w),R-SW/2-6),[nx1,ny1]=pt(ang(w),R+SW/2+6);
+ const needle=calm?`<line x1="${nx0}" y1="${ny0}" x2="${nx1}" y2="${ny1}" stroke="${c.bg}" stroke-width="20" stroke-linecap="round"/><line x1="${nx0}" y1="${ny0}" x2="${nx1}" y2="${ny1}" stroke="${c.tx}" stroke-width="10" stroke-linecap="round"/>`
+  :`<line x1="${nx0}" y1="${ny0}" x2="${nx1}" y2="${ny1}" stroke="${c.tx}" stroke-width="16" stroke-linecap="round"/><line x1="${nx0}" y1="${ny0}" x2="${nx1}" y2="${ny1}" stroke="${c.bg}" stroke-width="8" stroke-linecap="round"/>`;
+ return `<path d="${arc(A0,A1,R)}" fill="none" stroke="${c.trk}" stroke-width="${SW}" stroke-linecap="round"/><path d="${arc(ang(lo),ang(hi),R)}" fill="none" stroke="${c.green}" stroke-width="${SW}" stroke-linecap="round"/>${needle}`}
+function skip(x,y,s){return `<rect x="${x}" y="${y}" width="${s}" height="${s}" rx="12" fill="#8db8ec"/><g transform="translate(${x+s/2} ${y+s/2}) scale(${s/68})"><path d="M-12 -18 L11 0 L-12 18 Z M17 -18 v36" fill="none" stroke="#1b3d66" stroke-width="3.5" stroke-linejoin="round"/></g>`}
+function current(c,w,lo,hi){const ry=424,iy=520,ny=556;return head(c)+`
+ <text x="240" y="84" text-anchor="middle" font-size="22" fill="${c.sec}">Target</text>
+ <text x="240" y="118" text-anchor="middle" font-size="34" font-weight="500" fill="${c.tx}">${lo} – ${hi}</text>`+gauge(c,w,lo,hi,false)+`
+ <text x="240" y="346" text-anchor="middle" font-size="150" font-weight="500" fill="${c.tx}">${w}</text>
+ ${lapIcon(58,ry,c.sec,1)}${avgIcon(96,ry,c.sec,1)}<text x="118" y="${ry+17}" font-size="48" font-weight="500" fill="${c.tx}">301</text>
+ <path transform="translate(296 ${ry-17}) scale(1.4)" d="${heart}" fill="#e0453f"/><text x="336" y="${ry+17}" font-size="48" font-weight="500" fill="${c.tx}">153</text>
+ <text x="16" y="${iy}" font-size="26" fill="${c.sec}">Interval 1 / 16</text><text x="464" y="${iy+2}" text-anchor="end" font-size="56" font-weight="500" fill="${c.tx}">3:50</text>
+ <rect x="16" y="${iy+16}" width="448" height="10" rx="5" fill="${c.trk}"/><rect x="16" y="${iy+16}" width="356" height="10" rx="5" fill="${c.tx}"/>
+ <rect x="17" y="${ny}" width="446" height="84" rx="14" fill="none" stroke="${c.line}" stroke-width="2"/>
+ <text x="34" y="${ny+30}" font-size="22" fill="${c.sec}">Next up</text><text x="34" y="${ny+68}" font-size="32" font-weight="500" fill="${c.tx}">1m @ 181W · Z1</text>`+skip(384,ny+8,68)+chart(c)}
+function calm(c,w,lo,hi){const ry=410;return head(c)+`
+ <text x="240" y="86" text-anchor="middle" font-size="20" fill="${c.sec}">Target</text>
+ <text x="240" y="116" text-anchor="middle" font-size="30" fill="${c.sec}">${lo} – ${hi}</text>`+gauge(c,w,lo,hi,true)+`
+ <text x="240" y="346" text-anchor="middle" font-size="150" font-weight="500" fill="${c.tx}">${w}</text>
+ ${lapIcon(66,ry,c.sec,0.8)}${avgIcon(96,ry,c.sec,0.8)}<text x="114" y="${ry+15}" font-size="44" fill="${c.tx}">301</text>
+ <path transform="translate(302 ${ry-14}) scale(1.15)" d="${heart}" fill="#e0453f"/><text x="334" y="${ry+15}" font-size="44" fill="${c.tx}">153</text>
+ <text x="16" y="490" font-size="22" fill="${c.sec}">Interval 1 / 16</text><text x="464" y="492" text-anchor="end" font-size="44" fill="${c.tx}">3:50</text>
+ <rect x="16" y="506" width="448" height="8" rx="4" fill="${c.trk}"/><rect x="16" y="506" width="356" height="8" rx="4" fill="${c.tx}"/>
+ <line x1="16" y1="550" x2="464" y2="550" stroke="${c.hair}" stroke-width="2"/>
+ <text x="16" y="584" font-size="20" fill="${c.sec}">Next up</text><text x="16" y="620" font-size="30" fill="${c.tx}">1m @ 181W · Z1</text>`+skip(404,566,60)+chart(c)}
+function phone(fn,mode,w,label){return `<div style="text-align:center"><svg viewBox="0 0 480 800" width="250" style="border-radius:22px;display:block;border:6px solid #222" role="img"><title>${label}</title>${fn(T[mode],w,290,330)}</svg><div style="font-size:13px;color:var(--text-secondary);margin-top:8px">${label}</div></div>`}
+document.getElementById('row').innerHTML=phone(current,'dark',324,'Current')+phone(calm,'dark',324,'Calmer, dark')+phone(calm,'light',268,'Calmer, light, below range');
+</script>
+
+</body></html>

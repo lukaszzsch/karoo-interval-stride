@@ -1,0 +1,53 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Power gauge (B, v3)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>:root{--font-sans:system-ui,-apple-system,"Segoe UI",sans-serif;--text-secondary:#5F5E5A;--surface-1:#F1EFE8}
+body{margin:0;padding:24px;background:#FAFAF8;font-family:var(--font-sans)}h1{font-size:18px;font-weight:500;margin:0 0 4px}p.d{margin:0 0 16px;color:#5F5E5A;font-size:14px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}</style></head><body>
+<h1>Power gauge (B, v3)</h1><p class="d">Lap avg and HR tiles directly under the gauge, interval time and bar below them. Left: previous order for comparison. Not approved yet.</p>
+<div id="row" style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;padding:1rem;background:var(--surface-1);border-radius:12px"></div>
+<script>
+const T={dark:{bg:'#111821',tx:'#ffffff',sec:'#aeb5bf',trk:'#38414d',tile:'#252c36',green:'#62b04f',line:'#5b6370',chartgrid:'#2c333d'},
+light:{bg:'#ffffff',tx:'#111111',sec:'#555555',trk:'#e3e3e3',tile:'#f0ede6',green:'#5cb85c',line:'#888888',chartgrid:'#dddddd'}};
+const SW=34,A0=160,A1=20,cx=240,cy=348,R=192;
+const pt=(a,r)=>[cx+r*Math.cos(a*Math.PI/180),cy-r*Math.sin(a*Math.PI/180)];
+const arc=(a,b,r)=>{const [x0,y0]=pt(a,r),[x1,y1]=pt(b,r);return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`};
+const heart='M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z';
+function tiles(c,y){return `<rect x="16" y="${y}" width="218" height="94" rx="14" fill="${c.tile}"/><rect x="246" y="${y}" width="218" height="94" rx="14" fill="${c.tile}"/>
+ <text x="34" y="${y+34}" font-size="22" fill="${c.sec}">Lap avg</text><text x="34" y="${y+78}" font-size="40" font-weight="500" fill="${c.tx}">301</text>
+ <path transform="translate(262 ${y+16}) scale(0.95)" d="${heart}" fill="#e0453f"/>
+ <text x="288" y="${y+34}" font-size="22" fill="${c.sec}">HR</text><text x="264" y="${y+78}" font-size="40" font-weight="500" fill="${c.tx}">153</text>`}
+function intv(c,y){return `<text x="16" y="${y}" font-size="26" fill="${c.sec}">Interval 1 / 16</text>
+ <text x="464" y="${y+2}" text-anchor="end" font-size="56" font-weight="500" fill="${c.tx}">3:50</text>
+ <rect x="16" y="${y+16}" width="448" height="10" rx="5" fill="${c.trk}"/><rect x="16" y="${y+16}" width="356" height="10" rx="5" fill="${c.tx}"/>`}
+function phone(mode,w,lo,hi,label,swap){
+ const c=T[mode],tgt=(lo+hi)/2,min=tgt*0.75,max=tgt*1.25;
+ const ang=v=>A0-(Math.min(max,Math.max(min,v))-min)/(max-min)*(A0-A1);
+ const [nx0,ny0]=pt(ang(w),R-SW/2-8),[nx1,ny1]=pt(ang(w),R+SW/2+8);
+ const bars=[[60,'#1f9e75'],[95,'#c4821f'],[105,'#c4821f'],[118,'#d9582c'],[60,'#1f9e75'],[95,'#c4821f'],[105,'#c4821f'],[118,'#d9582c'],[60,'#1f9e75'],[95,'#c4821f'],[105,'#c4821f'],[118,'#d9582c'],[60,'#1f9e75'],[75,'#5e9a2a']];
+ let bx=20,bh='';bars.forEach(([h,col],i)=>{const bw=i==13?60:28;bh+=`<rect x="${bx}" y="${760-h*0.5}" width="${bw}" height="${h*0.5}" fill="${i==0?c.trk:col}"/>`;bx+=bw+4});
+ const mid=swap?tiles(c,374)+intv(c,520):intv(c,428)+tiles(c,468);
+ const ny=swap?556:576;
+ return `<div style="text-align:center"><svg viewBox="0 0 480 800" width="250" style="border-radius:22px;display:block;border:6px solid #222" role="img"><title>${label}</title>
+ <rect width="480" height="800" fill="${c.bg}"/>
+ <text x="460" y="48" text-anchor="end" font-size="44" font-weight="500" fill="${c.tx}">20:26</text>
+ <g fill="none" stroke="${c.sec}" stroke-width="4"><circle cx="32" cy="98" r="11"/><circle cx="32" cy="98" r="19" stroke-dasharray="7 5"/></g>
+ <rect x="438" y="84" width="7" height="28" rx="3" fill="${c.sec}"/><rect x="452" y="84" width="7" height="28" rx="3" fill="${c.sec}"/>
+ <text x="240" y="84" text-anchor="middle" font-size="22" fill="${c.sec}">Target</text>
+ <text x="240" y="118" text-anchor="middle" font-size="34" font-weight="500" fill="${c.tx}">${lo} – ${hi}</text>
+ <path d="${arc(A0,A1,R)}" fill="none" stroke="${c.trk}" stroke-width="${SW}" stroke-linecap="round"/>
+ <path d="${arc(ang(lo),ang(hi),R)}" fill="none" stroke="${c.green}" stroke-width="${SW}" stroke-linecap="round"/>
+ <line x1="${nx0}" y1="${ny0}" x2="${nx1}" y2="${ny1}" stroke="${c.tx}" stroke-width="16" stroke-linecap="round"/>
+ <line x1="${nx0}" y1="${ny0}" x2="${nx1}" y2="${ny1}" stroke="${c.bg}" stroke-width="8" stroke-linecap="round"/>
+ <text x="240" y="${swap?346:350}" text-anchor="middle" font-size="150" font-weight="500" fill="${c.tx}">${w}</text>
+ ${mid}
+ <rect x="17" y="${ny}" width="446" height="84" rx="14" fill="none" stroke="${c.line}" stroke-width="2"/>
+ <text x="34" y="${ny+30}" font-size="22" fill="${c.sec}">Next · Interval 2 / 16</text>
+ <text x="34" y="${ny+68}" font-size="32" font-weight="500" fill="${c.tx}">1m @ 181W · Z1</text>
+ <rect x="384" y="${ny+8}" width="70" height="68" rx="12" fill="#8db8ec"/><path d="M405 ${ny+24} L428 ${ny+42} L405 ${ny+60} Z M434 ${ny+24} v36" fill="none" stroke="#1b3d66" stroke-width="3.5" stroke-linejoin="round"/>
+ <line x1="16" y1="700" x2="464" y2="700" stroke="${c.chartgrid}"/><line x1="16" y1="730" x2="464" y2="730" stroke="${c.chartgrid}"/>
+ ${bh}<path d="M76 676 L76 768" stroke="${c.tx}" stroke-width="3"/><path d="M66 672 L86 672 L76 684 Z" fill="${c.tx}"/>
+ </svg><div style="font-size:13px;color:var(--text-secondary);margin-top:8px">${label}</div></div>`}
+document.getElementById('row').innerHTML=phone('dark',324,290,330,'Before: interval first',false)+phone('dark',324,290,330,'New: tiles under gauge',true)+phone('light',268,290,330,'New, light, below range',true);
+</script>
+
+</body></html>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Messages like "Move cancelled": solid and inverted, so they sit above the range tint. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/info_bg" />
+    <corners android:radius="8dp" />
+</shape>

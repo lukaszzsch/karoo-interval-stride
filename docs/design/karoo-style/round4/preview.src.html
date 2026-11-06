@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Karoo style round 4</title>
+<style>
+  @font-face { font-family: PlexCond; src: url(__FONT_COND__); font-weight: 500; }
+  @font-face { font-family: Plex; src: url(__FONT_REG__); font-weight: 400; }
+  @font-face { font-family: Plex; src: url(__FONT_MED__); font-weight: 500; }
+  @font-face { font-family: Plex; src: url(__FONT_BOLD__); font-weight: 600; }
+  :root { color-scheme: dark; }
+  body { background:#2A2A2A; color:#E8E6E1; font:14px/1.45 -apple-system, "Helvetica Neue", Arial, sans-serif; margin:0; padding:28px 16px; }
+  h1 { font-size:18px; font-weight:500; margin:0 0 4px; text-align:center; }
+  p.d { color:#A9A6A0; margin:0 auto 22px; max-width:780px; text-align:center; }
+  .devices { display:flex; flex-wrap:wrap; justify-content:center; gap:30px; }
+  .dev { display:grid; justify-items:center; gap:8px; }
+  .cap { color:#A9A6A0; font-size:13px; }
+</style>
+</head>
+<body>
+<h1>Karoo style, round 4: watts first, also with a route</h1>
+<p class="d">Drawn on real Karoo 3 screenshots (with and without a route loaded). Cell values all at the size the
+target range gets, so the cells are shorter and the watts / gauge get that space. With little height (a route),
+the gauge's arc gets flatter and wider instead of shrinking.</p>
+<div class="devices" id="devices"></div>
+
+<script>/*__KAROO_DEVICE_JS__*/</script>
+<script>
+const FRAME = "__FRAME__";
+const SHOTS = { classic: "__SHOT_classic__", gauge: "__SHOT_gauge__", classicRoute: "__SHOT_classic-route__", gaugeRoute: "__SHOT_gauge-route__" };
+const c = { bg:'#FFFFFF', tx:'#0B0B0B', tile:'#EDEDED', trk:'#E3E1DA', green:'#129A5E' };
+const P = {
+  lap: new Path2D('M12,4A8,8 0,1 0,17.66 6.34 M9.5,1.5L12,4L9.5,6.5'),
+  bolt: new Path2D('M13,2v8h6l-8,12v-8H5l8,-12z'),
+  target: new Path2D('M12,3a9,9 0,1 1,0 18a9,9 0,1 1,0 -18z M12,8a4,4 0,1 1,0 8a4,4 0,1 1,0 -8z'),
+  timer: new Path2D('M12,6a7.5,7.5 0,1 1,0 15a7.5,7.5 0,1 1,0 -15z M12,13.5V10 M9.5,2.5h5'),
+  heart: new Path2D('M19.5,12.572L12,20l-7.5,-7.428A5,5 0,1 1,12 6.006a5,5 0,1 1,7.5 6.572'),
+};
+function icon(ctx, p, x, y, size, color, fill) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(size / 24, size / 24); ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  if (fill) { ctx.fillStyle = color; ctx.fill(p); ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.stroke(p); } else { ctx.strokeStyle = color; ctx.stroke(p); }
+  ctx.restore();
+}
+function label(ctx, s, x, y, align = 'left') { ctx.font = '500 24px PlexCond'; ctx.fillStyle = c.tx; ctx.textAlign = align; ctx.textBaseline = 'alphabetic'; ctx.fillText(s, x, y); }
+// Karoo's number look: Plex Sans Regular, 90% wide, letters 0.05em closer.
+function numWidth(ctx, s, size, wt = 400) { ctx.font = `${wt} ${size}px Plex`; ctx.letterSpacing = `${-0.05 * size}px`; return ctx.measureText(s).width * 0.9; }
+function num(ctx, s, x, y, size, align = 'left', color = c.tx, wt = 400) {
+  ctx.save(); ctx.scale(0.9, 1); ctx.font = `${wt} ${size}px Plex`; ctx.letterSpacing = `${-0.05 * size}px`;
+  ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'alphabetic'; ctx.fillText(s, x / 0.9, y); ctx.restore();
+}
+// The watts: a step thicker than the other numbers (Plex Sans Medium, the Karoo's sans-serif).
+const WATTS_WT = 500;
+
+function rrect(ctx, x, y, w, h, r, fill) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fillStyle = fill; ctx.fill(); }
+
+// One fixed, compact block under the watts / gauge, the same on every screen (route or not):
+// 13sp labels, 30sp values, 96 px cells.
+const CELL_H = 96, CELL_W = 221, INSET = 12, VALUE = 56;
+// All cell values at the size a target range gets in a cell (so they never outgrow the watts).
+function cellValueSize(ctx) { return VALUE; }
+
+function cell(ctx, x, y, lbl, icons, value, vs) {
+  rrect(ctx, x, y, CELL_W, CELL_H, 14, c.tile);
+  const capMid = y + INSET + 9;
+  let ix = x + INSET; for (const [p, col, fill] of icons) { icon(ctx, p, ix, capMid - 10, 20, col, fill); ix += 24; }
+  label(ctx, lbl, x + CELL_W - INSET, capMid + 8, 'right');
+  num(ctx, value, x + CELL_W - INSET, y + CELL_H - 16, vs, 'right');
+}
+function lower(ctx, nextTop, gaugeMode, vs) {
+  const cellsTop = nextTop - 14 - CELL_H, base = cellsTop - 30;
+  icon(ctx, P.timer, 16, base - 8 - 11, 22, c.green);
+  label(ctx, 'INTERVAL 1 / 16', 44, base);
+  num(ctx, '−1:13', 464, base, 44, 'right');
+  rrect(ctx, 16, base + 12, 448, 8, 4, c.trk); rrect(ctx, 16, base + 12, 300, 8, 4, c.tx);
+  cell(ctx, 16, cellsTop, 'LAP AVG', [[P.lap, c.green], [P.bolt, c.green, true]], '304', vs);
+  if (gaugeMode) cell(ctx, 243, cellsTop, 'HR', [[P.heart, '#D63A44', true]], '143', vs);
+  else cell(ctx, 243, cellsTop, 'TARGET', [[P.target, c.green]], '293–308', vs);
+  return base - 40;   // bottom of the watts / gauge box
+}
+
+// The gauge fills its box: full width, and as the box gets shorter the arc gets flatter (smaller
+// sweep, larger radius) instead of the whole gauge shrinking. The watts take the biggest size that
+// fits under the arc.
+function gaugeLayout(ctx, W, H, text) {
+  const sw = W * 0.07; let best = null;
+  for (let S = 140; S >= 70; S -= 2) {
+    const half = S / 2 * Math.PI / 180, r = (W - sw) / 2 / Math.sin(half), cy = sw / 2 + r;
+    const endY = cy - r * Math.cos(half) + sw / 2;              // bottom of the arc's rounded ends
+    if (endY > H) continue;
+    const inner = r - sw / 2 - 6;
+    let lo = 20, hi = W * 0.36;
+    for (let k = 0; k < 18; k++) {
+      const f = (lo + hi) / 2, w = numWidth(ctx, text, f, WATTS_WT), base = Math.min(H - 4, endY + 0.22 * f), top = base - 0.71 * f;
+      const x = Math.min(w / 2, inner - 1), arcY = cy - Math.sqrt(inner * inner - x * x);
+      (w / 2 < inner && top >= arcY) ? lo = f : hi = f;
+    }
+    if (!best || lo > best.f + 0.5) best = { S, r, cy, sw, f: lo, base: Math.min(H - 4, endY + 0.22 * lo) };
+  }
+  return best;
+}
+function drawGauge(ctx, top, H, watts) {
+  const W = 448, g = gaugeLayout(ctx, W, H, String(watts)), cx = 240, cy = top + g.cy;
+  const a0 = -Math.PI / 2 - g.S / 2 * Math.PI / 180, sweep = g.S * Math.PI / 180;
+  ctx.lineCap = 'round'; ctx.lineWidth = g.sw;
+  ctx.strokeStyle = c.trk; ctx.beginPath(); ctx.arc(cx, cy, g.r, a0, a0 + sweep); ctx.stroke();
+  ctx.strokeStyle = c.green; ctx.beginPath(); ctx.arc(cx, cy, g.r, a0 + sweep * 0.375, a0 + sweep * 0.625); ctx.stroke();
+  const na = a0 + sweep * 0.66, n0 = g.r - g.sw / 2 - 5, n1 = g.r + g.sw / 2 + 5;
+  for (const [lw, col] of [[14, c.bg], [8, c.tx]]) { ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(cx + n0 * Math.cos(na), cy + n0 * Math.sin(na)); ctx.lineTo(cx + n1 * Math.cos(na), cy + n1 * Math.sin(na)); ctx.stroke(); }
+  num(ctx, String(watts), cx, top + g.base, g.f, 'center', c.tx, WATTS_WT);
+}
+// Top-row heart rate as built: red filled heart, Plex Sans SemiBold 20sp, 90% wide.
+function topHr(ctx, value) {
+  ctx.fillStyle = c.bg; ctx.fillRect(150, 70, 180, 52);
+  ctx.save(); ctx.font = '600 37.5px Plex'; const w = ctx.measureText(value).width * 0.9, x0 = 240 - (31 + 10 + w) / 2;
+  icon(ctx, P.heart, x0 - 7.7, 71, 46, '#D63A44', true);   // ≈ 31 × 28 px, like the device's 17 × 15.5dp heart
+  ctx.scale(0.9, 1); ctx.fillStyle = c.tx; ctx.textAlign = 'left'; ctx.fillText(value, (x0 + 41) / 0.9, 111); ctx.restore();
+}
+function classic(nextTop, redrawHr) {
+  return ctx => {
+    if (redrawHr) topHr(ctx, '105');
+    skipInverted(ctx, nextTop);
+    ctx.fillStyle = c.bg; ctx.fillRect(0, 126, 480, nextTop - 4 - 126);
+    const vs = cellValueSize(ctx), boxBottom = lower(ctx, nextTop, false, vs);
+    // Capped at a set size (200 px ≈ 107sp) and centred between the HR row and the interval row:
+    // the gap above the digits (to the HR) equals the gap below (to "INTERVAL").
+    const hrBottom = 112, intervalTop = boxBottom + 40 - 17;   // HR baseline; capitals' top of the interval label
+    let f = 200; while ((0.71 * f > intervalTop - hrBottom - 32 || numWidth(ctx, '290', f, WATTS_WT) > 448) && f > 40) f -= 2;
+    const baseline = (intervalTop + hrBottom + 0.71 * f) / 2;
+    num(ctx, '290', 240, baseline, f, 'center', c.tx, WATTS_WT);
+  };
+}
+function gauge(nextTop) {
+  return ctx => {
+    skipInverted(ctx, nextTop);
+    ctx.fillStyle = c.bg; ctx.fillRect(0, 62, 480, nextTop - 4 - 62);
+    // top row: gear and pause stay (from the screenshot); target icon + range on one line
+    ctx.font = '600 38px Plex'; const rw = ctx.measureText('293 – 308').width * 0.9, x0 = 240 - (rw + 30) / 2;
+    icon(ctx, P.target, x0, 85, 24, c.green);
+    ctx.save(); ctx.scale(0.9, 1); ctx.fillStyle = c.tx; ctx.textAlign = 'left'; ctx.fillText('293 – 308', (x0 + 30) / 0.9, 110); ctx.restore();
+    const vs = cellValueSize(ctx), boxBottom = lower(ctx, nextTop, true, vs);
+    drawGauge(ctx, 128, boxBottom - 128, 320);
+  };
+}
+// ⏭ inverted (text colour: black in light mode, white in dark) so Karoo's yellow stays for its own
+// navigation (the route pill and the page arrows).
+const SKIP = new Path2D('M4,5v14l12,-7z M20,5v14');
+function skipInverted(ctx, nextTop) {
+  const y = nextTop + 14; ctx.fillStyle = c.bg; ctx.fillRect(385, y - 2, 68, 68);
+  rrect(ctx, 387, y, 64, 64, 12, c.tx);
+  ctx.save(); ctx.translate(403, y + 16); ctx.scale(32 / 24, 32 / 24); ctx.strokeStyle = c.bg; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke(SKIP); ctx.restore();
+}
+const KEEP = [ctx => ctx.roundRect(-50, 683, 150, 100, 50), ctx => ctx.roundRect(380, 683, 150, 100, 50)];
+const CORNERS = [ctx => ctx.rect(0, 66, 62, 56), ctx => ctx.rect(420, 66, 60, 56)];   // gear and pause, from the screenshot
+
+(async () => {
+  for (const w of ['400 20px Plex', '500 20px Plex', '600 20px Plex', '500 20px PlexCond']) await document.fonts.load(w);
+  const load = s => KarooDevice.load({ frame: FRAME, screen: s });
+  const [cl, ga, clr, gar] = await Promise.all([load(SHOTS.classic), load(SHOTS.gauge), load(SHOTS.classicRoute), load(SHOTS.gaugeRoute)]);
+  const items = [
+    [gar, gar.screen({}), 'Now: gauge with a route'],
+    [gar, gar.screen({ draw: gauge(494), keepOnTop: CORNERS }), 'New: gauge with a route'],
+    [clr, clr.screen({ draw: classic(494) }), 'New: classic with a route'],
+    [ga, ga.screen({ draw: gauge(574), keepOnTop: [...KEEP, ...CORNERS] }), 'New: gauge'],
+    [cl, cl.screen({ draw: classic(574, true), keepOnTop: KEEP }), 'New: classic'],
+  ];
+  const box = document.getElementById('devices');
+  for (const [dev, scr, cap] of items) {
+    const d = document.createElement('div'); d.className = 'dev'; d.append(dev.device(scr, 260));
+    const t = document.createElement('div'); t.className = 'cap'; t.textContent = cap; d.append(t); box.append(d);
+  }
+})();
+</script>
+</body>
+</html>

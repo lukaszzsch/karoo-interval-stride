@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Karoo native styling: the skip button in the text colour (black in light mode, white in dark),
+     so Karoo's yellow stays for its own navigation. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/text" />
+    <corners android:radius="8dp" />
+</shape>

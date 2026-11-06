@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Karoo style round 3</title>
+<style>
+  @font-face { font-family: PlexCond; src: url(__FONT_COND__); font-weight: 500; }
+  @font-face { font-family: Plex; src: url(__FONT_REG__); font-weight: 400; }
+  @font-face { font-family: Plex; src: url(__FONT_MED__); font-weight: 500; }
+  @font-face { font-family: Plex; src: url(__FONT_BOLD__); font-weight: 700; }
+  :root { color-scheme: dark; }
+  body { background:#2A2A2A; color:#E8E6E1; font:14px/1.45 -apple-system, "Helvetica Neue", Arial, sans-serif; margin:0; padding:28px 16px; }
+  h1 { font-size:18px; font-weight:500; margin:0 0 4px; text-align:center; }
+  p.d { color:#A9A6A0; margin:0 auto 22px; max-width:760px; text-align:center; }
+  .devices { display:flex; flex-wrap:wrap; justify-content:center; gap:34px; }
+  .dev { display:grid; justify-items:center; gap:8px; }
+  .cap { color:#A9A6A0; font-size:13px; }
+  .zooms { display:flex; flex-wrap:wrap; justify-content:center; gap:24px; margin-top:34px; }
+</style>
+</head>
+<body>
+<h1>Karoo native styling, round 3</h1>
+<p class="d">Drawn on real Karoo 3 screenshots. Cells sized like Karoo's own data fields (240 × 145 px, 12 px insets, 15sp labels, 48sp values),
+"INTERVAL" on the time's baseline, and a new Settings page with Karoo's own segmented control.</p>
+<div class="devices" id="devices"></div>
+<div class="zooms" id="zooms"></div>
+
+<script>/*__KAROO_DEVICE_JS__*/</script>
+<script>
+const FRAME = "__FRAME__";
+const SHOTS = { classicLight: "__SHOT_CLASSIC_LIGHT__", gaugeLight: "__SHOT_GAUGE_LIGHT__", classicDark: "__SHOT_CLASSIC_DARK__", settings: "__SHOT_SETTINGS__", native: "__SHOT_NATIVE__" };
+
+// Karoo colours (light / dark), as in the app's values/ and values-night/ resources.
+const C = {
+  light: { bg:'#FFFFFF', tx:'#0B0B0B', sec:'#444441', tile:'#EDEDED', trk:'#E3E1DA', green:'#129A5E', outline:'#888780', prev:'#D3D1C7' },
+  dark:  { bg:'#0B0B0B', tx:'#FFFFFF', sec:'#D3D1C7', tile:'#2A2A2A', trk:'#3A3A38', green:'#1DB872', outline:'#5F5E5A', prev:'#444441' },
+};
+const YELLOW = '#FFE900';
+const P = {
+  lap: new Path2D('M12,4A8,8 0,1 0,17.66 6.34 M9.5,1.5L12,4L9.5,6.5'),
+  bolt: new Path2D('M13,2v8h6l-8,12v-8H5l8,-12z'),
+  target: new Path2D('M12,3a9,9 0,1 1,0 18a9,9 0,1 1,0 -18z M12,8a4,4 0,1 1,0 8a4,4 0,1 1,0 -8z'),
+  timer: new Path2D('M12,6a7.5,7.5 0,1 1,0 15a7.5,7.5 0,1 1,0 -15z M12,13.5V10 M9.5,2.5h5'),
+  heart: new Path2D('M19.5,12.572L12,20l-7.5,-7.428A5,5 0,1 1,12 6.006a5,5 0,1 1,7.5 6.572'),
+  skip: new Path2D('M4,5v14l12,-7z M20,5v14'),
+  sun: new Path2D('M12,8a4,4 0,1 1,0 8a4,4 0,1 1,0 -8z M12,2v2 M12,20v2 M4.9,4.9l1.4,1.4 M17.7,17.7l1.4,1.4 M2,12h2 M20,12h2 M4.9,19.1l1.4,-1.4 M17.7,6.3l1.4,-1.4'),
+  grid: new Path2D('M4,4h7v7H4z M13,4h7v7h-7z M4,13h7v7H4z M13,13h7v7h-7z'),
+  person: new Path2D('M12,4a4,4 0,1 1,0 8a4,4 0,1 1,0 -8z M4,21c0,-4 4,-6 8,-6s8,2 8,6'),
+  chevron: new Path2D('M9,5l7,7l-7,7'),
+  back: new Path2D('M20,12H5 M11,6l-6,6l6,6'),
+};
+function icon(ctx, path, x, y, size, color, { fill = false, stroke = 2.2 } = {}) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(size / 24, size / 24);
+  ctx.lineWidth = stroke; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  if (fill) { ctx.fillStyle = color; ctx.fill(path); ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.stroke(path); }
+  else { ctx.strokeStyle = color; ctx.stroke(path); }
+  ctx.restore();
+}
+function text(ctx, s, x, y, { size, color, align = 'left', font = 'PlexCond', weight = 500, maxW } = {}) {
+  ctx.font = `${weight} ${size}px ${font}`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'alphabetic';
+  if (maxW) { let s2 = size; while (ctx.measureText(s).width > maxW && s2 > 10) { s2 -= 1; ctx.font = `${weight} ${s2}px ${font}`; } }
+  ctx.fillText(s, x, y);
+}
+// Numbers like Karoo's own fields: IBM Plex Sans Regular (on the Karoo: sans-serif-light), 90% wide,
+// letters 0.05em closer. Measured on the Karoo's data page: stroke 11-12% of the digit height.
+const SCALE_X = 0.9, TRACK = -0.05;
+function num(ctx, s, x, y, { size, color, align = 'left', maxW } = {}) {
+  ctx.save(); ctx.scale(SCALE_X, 1);
+  let sz = size; const set = () => { ctx.font = `400 ${sz}px Plex`; ctx.letterSpacing = `${TRACK * sz}px`; };
+  set(); if (maxW) while (ctx.measureText(s).width * SCALE_X > maxW && sz > 10) { sz -= 1; set(); }
+  ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'alphabetic';
+  ctx.fillText(s, x / SCALE_X, y); ctx.restore();
+}
+function rrect(ctx, x, y, w, h, r, fill, stroke, lw = 2) {
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, r);
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+}
+
+// Native field metrics (measured on the Karoo's own data page): label capitals 20 px (≈15sp, 28 px
+// font), icon 22 px centred on the capitals, 12 px insets, value digits 63 px (≈48sp, 90 px font).
+const LABEL = 28, CAP_MID = 10, ICON = 22, INSET = 12, VALUE = 90;
+// A label row: icons left, label right; capitals' middle at y.
+function labelRow(ctx, c, x, w, capMid, label, icons) {
+  let ix = x + INSET;
+  for (const [p, opts] of icons) { icon(ctx, p, ix, capMid - ICON / 2, ICON, opts.color, opts); ix += ICON + 4; }
+  text(ctx, label, x + w - INSET, capMid + CAP_MID, { size: LABEL, color: c.tx, align: 'right' });
+}
+// A cell like Karoo's own field: 145 px tall, label 12 px from the top, value 22 px from the bottom.
+function cell(ctx, c, x, y, w, label, icons, value) {
+  rrect(ctx, x, y, w, 145, 14, c.tile);
+  labelRow(ctx, c, x, w, y + INSET + 10, label, icons);
+  num(ctx, value, x + w - INSET, y + 145 - 22, { size: VALUE, color: c.tx, align: 'right', maxW: w - 2 * INSET });
+}
+let MINUS = true;
+function intervalRow(ctx, c, baseline) {
+  // Label and time share one baseline (bottoms of the capitals and the digits line up).
+  icon(ctx, P.timer, 16, baseline - CAP_MID - ICON / 2, ICON, c.green);
+  text(ctx, 'INTERVAL 1 / 16', 16 + ICON + 6, baseline, { size: LABEL, color: c.tx });
+  num(ctx, (MINUS ? '\u22122:18' : '2:18'), 464, baseline, { size: 50, color: c.tx, align: 'right' });
+  rrect(ctx, 16, baseline + 12, 448, 8, 4, c.trk); rrect(ctx, 16, baseline + 12, 240, 8, 4, c.tx);
+}
+function nextUp(ctx, c, y) {
+  const h = 88;
+  rrect(ctx, 17, y, 446, h, 14, null, c.outline, 2);
+  rrect(ctx, 28, y + 12, 64, 64, 12, c.prev);
+  ctx.save(); ctx.translate(28 + 64, y + 12); ctx.scale(-1, 1); icon(ctx, P.skip, 16, 16, 32, c.tx, { stroke: 2 }); ctx.restore();
+  rrect(ctx, 388, y + 12, 64, 64, 12, YELLOW); icon(ctx, P.skip, 404, y + 28, 32, '#0B0B0B', { stroke: 2 });
+  text(ctx, 'NEXT UP', 240, y + 32, { size: 21, color: c.sec, align: 'center' });
+  text(ctx, '1m @ 181W', 240, y + 68, { size: 38, color: c.tx, align: 'center', weight: 500 });
+  // the step is drawn a second time 0.8 px to the right: Android's fake bold for the one-weight font
+  text(ctx, '1m @ 181W', 240.8, y + 68, { size: 38, color: c.tx, align: 'center' });
+}
+const KEEP = [ctx => ctx.roundRect(-50, 683, 150, 100, 50), ctx => ctx.roundRect(380, 683, 150, 100, 50)];
+
+function classic(c) {
+  return ctx => {
+    ctx.fillStyle = c.bg; ctx.fillRect(0, 128, 480, 668 - 128);
+    num(ctx, '306', 240, 300, { size: 205, color: c.tx, align: 'center' });   // watts shrink to the space left
+    intervalRow(ctx, c, 362);
+    cell(ctx, c, 16, 394, 221, 'LAP AVG', [[P.lap, { color: c.green }], [P.bolt, { color: c.green, fill: true }]], '305');
+    cell(ctx, c, 243, 394, 221, 'TARGET', [[P.target, { color: c.green }]], '293–308');
+    nextUp(ctx, c, 552);
+  };
+}
+function gauge(c) {
+  return ctx => {
+    ctx.fillStyle = c.bg; ctx.fillRect(0, 134, 480, 668 - 134);
+    const W = 356, top = 138, cx = 240, r = W * 0.4286, sw = W * 0.0759, cy = top + W * 0.491;
+    ctx.lineCap = 'round'; ctx.lineWidth = sw;
+    const a0 = Math.PI * 200 / 180, sweep = Math.PI * 140 / 180;
+    ctx.strokeStyle = c.trk; ctx.beginPath(); ctx.arc(cx, cy, r, a0, a0 + sweep); ctx.stroke();
+    ctx.strokeStyle = c.green; ctx.beginPath(); ctx.arc(cx, cy, r, a0 + sweep * 0.375, a0 + sweep * 0.625); ctx.stroke();
+    const na = a0 + sweep * 0.47, n0 = r - sw / 2 - 5, n1 = r + sw / 2 + 5;
+    const line = (lw, col, op) => { ctx.save(); ctx.globalCompositeOperation = op; ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(cx + n0 * Math.cos(na), cy + n0 * Math.sin(na)); ctx.lineTo(cx + n1 * Math.cos(na), cy + n1 * Math.sin(na)); ctx.stroke(); ctx.restore(); };
+    line(14, c.bg, 'source-over'); line(8, c.tx, 'source-over');
+    num(ctx, '300', cx, top + W * 0.487, { size: W * 0.335 * 0.95, color: c.tx, align: 'center' });
+    intervalRow(ctx, c, 362);
+    cell(ctx, c, 16, 394, 221, 'LAP AVG', [[P.lap, { color: c.green }], [P.bolt, { color: c.green, fill: true }]], '304');
+    cell(ctx, c, 243, 394, 221, 'HR', [[P.heart, { color: c.tx }]], '117');
+    nextUp(ctx, c, 552);
+  };
+}
+// New Settings page (from the Workouts page): appearance first, the intervals.icu account one tap away.
+function settings(theme = 'Auto') {
+  const c = C.light;
+  return ctx => {
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 56, 480, 744);
+    icon(ctx, P.back, 34, 86, 36, '#0B0B0B', { stroke: 2.2 });
+    text(ctx, 'Settings', 24, 196, { size: 44, color: '#0B0B0B', font: 'Plex', weight: 700 });
+    // Appearance: Karoo's own segmented control (as in Karoo Settings → Display → In-Ride Appearance)
+    icon(ctx, P.sun, 24, 236, 34, '#1C2E2E', { stroke: 2 });
+    text(ctx, 'Appearance', 68, 264, { size: 31, color: '#1C2E2E', font: 'Plex', weight: 400 });
+    rrect(ctx, 23, 290, 434, 76, 38, '#F4F4F4');
+    const opts = ['Dark', 'Light', 'Auto'], segW = 434 / 3;
+    opts.forEach((o, i) => {
+      if (o === theme) rrect(ctx, 23 + i * segW + 4, 294, segW - 8, 68, 34, '#9FB3BD');
+      text(ctx, o, 23 + segW * i + segW / 2, 337, { size: 21, color: '#243535', font: 'Plex', weight: 500, align: 'center' });
+    });
+    text(ctx, 'Auto follows the Karoo’s In-Ride Appearance.', 23, 404, { size: 21, color: '#7B7B7B', font: 'Plex' });
+    ctx.fillStyle = '#DDDDDD'; ctx.fillRect(23, 432, 434, 2);
+    // Karoo native styling switch
+    icon(ctx, P.grid, 24, 456, 34, '#1C2E2E', { stroke: 2 });
+    text(ctx, 'Karoo style', 68, 484, { size: 31, color: '#1C2E2E', font: 'Plex', weight: 400 });
+    rrect(ctx, 386, 458, 70, 36, 18, '#9FB3BD'); ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(438, 476, 15, 0, Math.PI * 2); ctx.fill();
+    text(ctx, 'Karoo’s font, labels and icons on the', 23, 532, { size: 22, color: '#7B7B7B', font: 'Plex' });
+    text(ctx, 'interval screen.', 23, 562, { size: 22, color: '#7B7B7B', font: 'Plex' });
+    ctx.fillStyle = '#DDDDDD'; ctx.fillRect(23, 592, 434, 2);
+    // intervals.icu: one row, opens the account page
+    icon(ctx, P.person, 24, 620, 34, '#1C2E2E', { stroke: 2 });
+    text(ctx, 'intervals.icu account', 68, 648, { size: 31, color: '#1C2E2E', font: 'Plex', weight: 400 });
+    text(ctx, 'Connected', 68, 680, { size: 22, color: '#7B7B7B', font: 'Plex' });
+    icon(ctx, P.chevron, 428, 632, 28, '#1C2E2E', { stroke: 2.4 });
+  };
+}
+
+(async () => {
+  await document.fonts.load('500 20px PlexCond'); await document.fonts.load('400 20px Plex'); await document.fonts.load('500 20px Plex'); await document.fonts.load('700 20px Plex');
+  const load = s => KarooDevice.load({ frame: FRAME, screen: s });
+  const [cl, gl, cd, st, nat] = await Promise.all([load(SHOTS.classicLight), load(SHOTS.gaugeLight), load(SHOTS.classicDark), load(SHOTS.settings), load(SHOTS.native)]);
+  const items = [
+    [cl, cl.screen({ draw: classic(C.light), keepOnTop: KEEP }), 'Classic, light'],
+    [gl, gl.screen({ draw: gauge(C.light), keepOnTop: KEEP }), 'Gauge, light'],
+    [cd, cd.screen({ draw: classic(C.dark), keepOnTop: KEEP }), 'Classic, dark'],
+    [st, st.screen({ draw: settings('Auto') }), 'Settings page (new)'],
+  ];
+  const box = document.getElementById('devices');
+  for (const [dev, scr, cap] of items) {
+    const d = document.createElement('div'); d.className = 'dev';
+    d.append(dev.device(scr, 300));
+    const t = document.createElement('div'); t.className = 'cap'; t.textContent = cap; d.append(t);
+    box.append(d);
+  }
+  const z = document.getElementById('zooms');
+  const zoom = (dev, scr, rect, cap) => { const d = document.createElement('div'); d.className = 'dev'; d.append(dev.crop(scr, rect, 1.6)); const t = document.createElement('div'); t.className = 'cap'; t.textContent = cap; d.append(t); z.append(d); };
+  MINUS = false; const noMinus = cl.screen({ draw: classic(C.light), keepOnTop: KEEP }); MINUS = true;
+  zoom(cl, noMinus, [0, 320, 480, 70], 'Smaller timer, no minus, 1.6×');
+  zoom(cl, items[0][1], [0, 320, 480, 70], 'Smaller timer with minus (counting down), 1.6×');
+  zoom(cl, items[0][1], [0, 300, 480, 250], 'Interval row and cells, 1.6×');
+  zoom(nat, nat.screen({}), [0, 210, 480, 145], 'Karoo\u2019s own fields, for comparison, 1.6×');
+  zoom(cl, items[0][1], [0, 394, 480, 145], 'Our cells, same zoom, 1.6×');
+  zoom(st, items[3][1], [0, 220, 480, 200], 'Appearance control, 1.6×');
+})();
+</script>
+</body>
+</html>
