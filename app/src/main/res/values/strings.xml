@@ -18,6 +18,8 @@
     <string name="lap_avg">Śr. okr.</string>
     <string name="np">NP okr.</string>
     <string name="target">Cel</string>
+    <string name="cadence">Kadencja</string>
+    <string name="cadence_target">Kad. %1$s</string>
     <string name="left">zostało %1$s</string>
     <string name="lands_at">Skok do %1$s</string>
     <string name="step_summary">%1$s @ %2$dW</string>

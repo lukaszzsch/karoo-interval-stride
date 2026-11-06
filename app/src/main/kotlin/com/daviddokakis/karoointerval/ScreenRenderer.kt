@@ -133,6 +133,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             if (s.targetShowsRange && band != null) "${band.first}–${band.last}" else s.target?.toString() ?: "--"
         }
         hrText = s.heartRate?.toString() ?: "--"
+        cadText = s.cadence?.takeIf { it > 0 }?.toString() ?: "--"
+        cadTileShown = (s.cadence ?: 0) > 0 || s.currentStep?.cadenceRange != null
         applyTextSizes(v, gaugeMode, karoo)
 
         v.setViewVisibility(R.id.content, View.VISIBLE)
@@ -257,6 +259,27 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         v.setTextViewText(R.id.lap_avg_label, context.getString(if (s.lapShowsNp) R.string.np else R.string.lap_avg))
         v.setTextViewText(R.id.lap_avg, (if (s.lapShowsNp) s.lapNp else s.lapAvg)?.toString() ?: "--")
         v.setOnClickPendingIntent(R.id.lap_tile, lapNpToggleIntent)
+
+        // Cadence tile: live rpm (or --), the step's target in the label, the number blue / green
+        // / red below / in / above the target. Shown when there's a cadence sensor or a target.
+        v.setViewVisibility(R.id.cad_tile, if (cadTileShown) View.VISIBLE else View.GONE)
+        if (cadTileShown) {
+            val step = s.currentStep
+            v.setTextViewText(
+                R.id.cad_label,
+                step?.cadenceRange?.let { context.getString(R.string.cadence_target, it) } ?: context.getString(R.string.cadence),
+            )
+            v.setTextViewText(R.id.cad_value, cadText)
+            val live = s.cadence?.takeIf { it > 0 }
+            val cadColor = when (if (live != null) step?.cadenceState(live) else null) {
+                -1 -> R.color.watts_under
+                0 -> R.color.watts_in_range
+                1 -> R.color.watts_over
+                else -> R.color.text
+            }
+            v.setTextColor(R.id.cad_value, color(cadColor))
+            v.setTextColor(R.id.cad_label, labelColor)
+        }
         val band = s.targetRange
         if (gaugeMode) {
             // Target (top row): the range, or the target when the step has no range.
@@ -491,43 +514,17 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     }
 
     /**
-     * "Interval 3 / 20", plus the step's cadence target and coach's note when it has them:
-     * "3 / 20 · 85–90 rpm · Spokojny start" (the label ellipsizes if it's too long).
+     * "Interval 3 / 20", or "3 / 20 · Spokojny start" when the step has a coach's note (scrolled
+     * when it's too long). Cadence has its own tile.
      */
     private fun intervalLabel(s: ScreenState): CharSequence {
         val step = s.currentStep
-        // Cadence: live rpm with the step's target in brackets, coloured below / in / above it.
-        val live = s.cadence?.takeIf { it > 0 }
-        val target = step?.cadenceRange
-        val liveText = live?.let { "$it rpm" }
-        val cadence = when {
-            liveText != null && target != null -> "$liveText ($target)"
-            liveText != null -> liveText
-            else -> step?.cadenceText
-        }
-        if (cadence == null && step?.note == null) return context.getString(R.string.interval_of, s.stepIndex + 1, s.stepCount)
-        val counter = "${s.stepIndex + 1} / ${s.stepCount}"
-        val prefix = (listOf(counter) + listOfNotNull(cadence)).joinToString(SEP)
+        if (step?.note == null) return context.getString(R.string.interval_of, s.stepIndex + 1, s.stepCount)
+        val prefix = "${s.stepIndex + 1} / ${s.stepCount}"
         // Room for the label: the row minus the time left on its right (and Karoo style's timer icon).
         val timePx = measure("\u2212" + "00:00", if (s.karooStyle) 23f else 30f, bold = true, karoo = false)
         val avail = config.viewSize.first - (16 + 8 + if (s.karooStyle) 16 else 0) * density - timePx
-        val text = ticker(intervalTicker, prefix, step?.note, avail, 13f, s.karooStyle)
-        val state = if (live != null) step?.cadenceState(live) else null
-        if (liveText == null || state == null) return text
-        // Colour the live rpm only when this frame shows it: when the line takes turns, a frame
-        // with just the step's note must stay plain.
-        val start = counter.length + SEP.length
-        if (!text.startsWith(counter + SEP + liveText)) return text
-        return android.text.SpannableString(text).apply {
-            val c = color(
-                when (state) {
-                    -1 -> R.color.watts_under
-                    0 -> R.color.watts_in_range
-                    else -> R.color.watts_over
-                },
-            )
-            setSpan(android.text.style.ForegroundColorSpan(c), start, start + liveText.length, 0)
-        }
+        return ticker(intervalTicker, prefix, step.note, avail, 13f, s.karooStyle)
     }
 
     /** "Next up · 92–98 rpm · Dwuminutówka 2" when the step has a cadence target or note. */
@@ -644,7 +641,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
 
     /** Largest size up to [CELL_VALUE_SP] at which [text] fits in a Karoo-style cell. */
     private fun cellValueSp(text: String): Float {
-        val cellPx = ((config.viewSize.first - 16 * density) / 2f - 3 * density - 12 * density).coerceAtLeast(1f)
+        val tiles = if (cadTileShown) 3f else 2f
+        val cellPx = ((config.viewSize.first - 16 * density) / tiles - 3 * density - 12 * density).coerceAtLeast(1f)
         var sp = CELL_VALUE_SP
         while (sp > 16f) {
             numberPaint.textSize = sp * density * scale
@@ -657,6 +655,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     private var lapText = ""
     private var targetText = ""
     private var hrText = ""
+    private var cadText = ""
+    private var cadTileShown = false
 
     private fun applyTextSizes(v: RemoteViews, gaugeMode: Boolean, karoo: Boolean) {
         // Must match the sp sizes in the layouts (the reference size).
@@ -668,6 +668,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             // Karoo native styling: one compact block under the watts, the same on every screen:
             // 13sp labels, 28sp values (smaller only if a value doesn't fit), 23sp time.
             sizes += listOf(R.id.lap_avg to cellValueSp(lapText), R.id.lap_avg_label to 13f, R.id.interval_label to 13f, R.id.time_left to 23f)
+            sizes += listOf(R.id.cad_value to cellValueSp(cadText), R.id.cad_label to 13f)
             sizes += if (gaugeMode) {
                 // top row: target range in the top-row HR's type; HR is a cell
                 listOf(R.id.hr to cellValueSp(hrText), R.id.hr_label to 13f, R.id.target to 20f, R.id.target_next to 14f)
@@ -677,6 +678,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             }
         } else {
             sizes += listOf(R.id.interval_label to 13f, R.id.time_left to 30f, R.id.lap_avg to 22f)
+            sizes += listOf(R.id.cad_value to 22f, R.id.cad_label to 11f)
             sizes += if (gaugeMode) {
                 listOf(R.id.hr to 22f, R.id.hr_label to 11f, R.id.lap_avg_label to 11f, R.id.target_label to 11f, R.id.target to 18f, R.id.target_next to 14f)
             } else {
@@ -687,7 +689,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         if (karoo) {
             // A shrunk cell value has less room under its baseline, so it would sit lower than a
             // full-size one: pad it up by the difference, so every value sits on the same line.
-            listOf(R.id.lap_avg to lapText, R.id.target to targetText, R.id.hr to hrText).forEach { (id, text) ->
+            listOf(R.id.lap_avg to lapText, R.id.target to targetText, R.id.hr to hrText, R.id.cad_value to cadText).forEach { (id, text) ->
                 if (id == R.id.hr && !gaugeMode) return@forEach      // the top-row HR, not a cell
                 if (id == R.id.target && gaugeMode) return@forEach   // the top-row target, not a cell
                 v.setViewPadding(id, 0, 0, 0, baselineLift(cellValueSp(text)))
