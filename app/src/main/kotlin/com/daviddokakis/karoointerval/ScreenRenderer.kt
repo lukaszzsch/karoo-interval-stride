@@ -135,6 +135,9 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         hrText = s.heartRate?.toString() ?: "--"
         cadText = s.cadence?.takeIf { it > 0 }?.toString() ?: "--"
         cadTileShown = (s.cadence ?: 0) > 0 || s.currentStep?.cadenceRange != null
+        // While a jump is chosen or counting down, the Target tile shows "174 → 189": the Lap avg
+        // tile steps aside so it fits (the gauge layouts show the target in the top row instead).
+        lapHiddenForJump = !gaugeMode && s.landStep != null
         applyTextSizes(v, gaugeMode, karoo)
 
         v.setViewVisibility(R.id.content, View.VISIBLE)
@@ -259,6 +262,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         v.setTextViewText(R.id.lap_avg_label, context.getString(if (s.lapShowsNp) R.string.np else R.string.lap_avg))
         v.setTextViewText(R.id.lap_avg, (if (s.lapShowsNp) s.lapNp else s.lapAvg)?.toString() ?: "--")
         v.setOnClickPendingIntent(R.id.lap_tile, lapNpToggleIntent)
+        v.setViewVisibility(R.id.lap_tile, if (lapHiddenForJump) View.GONE else View.VISIBLE)
 
         // Cadence tile: live rpm (or --), the step's target in the label, the number blue / green
         // / red below / in / above the target. Shown when there's a cadence sensor or a target.
@@ -641,7 +645,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
 
     /** Largest size up to [CELL_VALUE_SP] at which [text] fits in a Karoo-style cell. */
     private fun cellValueSp(text: String): Float {
-        val tiles = if (cadTileShown) 3f else 2f
+        val tiles = (if (cadTileShown) 3f else 2f) - (if (lapHiddenForJump) 1f else 0f)
         val cellPx = ((config.viewSize.first - 16 * density) / tiles - 3 * density - 12 * density).coerceAtLeast(1f)
         var sp = CELL_VALUE_SP
         while (sp > 16f) {
@@ -657,6 +661,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     private var hrText = ""
     private var cadText = ""
     private var cadTileShown = false
+    private var lapHiddenForJump = false
 
     private fun applyTextSizes(v: RemoteViews, gaugeMode: Boolean, karoo: Boolean) {
         // Must match the sp sizes in the layouts (the reference size).
