@@ -3,6 +3,9 @@ package com.daviddokakis.karoointerval
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Duration
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.LocalDateTime
 import java.time.LocalDate
 import kotlin.math.roundToInt
@@ -101,11 +104,11 @@ class Stride(
     }
 
     /**
-     * Finds the ride that started at [rideStart] (local time) among the athlete's activities
+     * Finds the ride that started at [rideStart] among the athlete's activities
      * and sets its RPE and feel (PATCH /activities/{id}, needs activities.write).
      */
     suspend fun rate(
-        rideStart: LocalDateTime,
+        rideStart: Instant,
         rpe: Int?,
         feel: Int?,
         http: suspend (method: String, url: String, headers: Map<String, String>, body: ByteArray?) -> HttpResult,
@@ -159,24 +162,30 @@ class Stride(
             return runCatching { LocalDate.parse(at.take(10)) }.getOrNull()
         }
 
-        /** started_at as local wall-clock time (see [plannedDate]). */
+        /** started_at as written (local wall-clock time per the docs; UTC for Hammerhead uploads in practice). */
         internal fun startedAt(activity: JSONObject): LocalDateTime? {
             val at = activity.optString("started_at").ifBlank { return null }
             return runCatching { LocalDateTime.parse(at.removeSuffix("Z").substringBefore('+').take(19)) }.getOrNull()
         }
 
         /**
-         * The recorded activity of a ride that started at [rideStart] (local time): started
-         * within 5 minutes of it, preferring the Karoo's own upload (source HAMMERHEAD). Garmin
-         * copies are skipped: Stride doesn't let other apps change them.
+         * The recorded activity of a ride that started at [rideStart]: started within 5 minutes of
+         * it, preferring the Karoo's own upload (source HAMMERHEAD). Stride's docs say started_at
+         * is local wall-clock time, but Hammerhead uploads come as UTC, so both readings count.
+         * Garmin copies are skipped: Stride doesn't let other apps change them.
          */
-        internal fun findRide(activities: JSONArray, rideStart: LocalDateTime): String? {
+        internal fun findRide(activities: JSONArray, rideStart: Instant, zone: ZoneId = ZoneId.systemDefault()): String? {
+            val asUtc = LocalDateTime.ofInstant(rideStart, ZoneOffset.UTC)
+            val asLocal = LocalDateTime.ofInstant(rideStart, zone)
             var best: Pair<String, Long>? = null
             for (i in 0 until activities.length()) {
                 val a = activities.optJSONObject(i) ?: continue
                 if (a.optString("source").uppercase() == "GARMIN" || a.optBoolean("recording_withheld", false)) continue
                 val started = startedAt(a) ?: continue
-                val diff = Math.abs(Duration.between(rideStart, started).seconds)
+                val diff = minOf(
+                    Math.abs(Duration.between(asUtc, started).seconds),
+                    Math.abs(Duration.between(asLocal, started).seconds),
+                )
                 if (diff > MATCH_SECONDS) continue
                 val score = diff + if (a.optString("source").uppercase() == "HAMMERHEAD") 0 else MATCH_SECONDS
                 if (best == null || score < best.second) best = a.optString("id") to score

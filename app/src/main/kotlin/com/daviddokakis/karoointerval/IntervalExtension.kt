@@ -22,8 +22,6 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
 
 /** Entry point the Karoo system binds to. */
 class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
@@ -130,7 +128,7 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
             finishSync(getString(R.string.rate_sync_no_token), error = true)
             return
         }
-        val rideStart = LocalDateTime.ofInstant(Instant.ofEpochMilli(pending.rideStartMs), ZoneId.systemDefault())
+        val rideStart = Instant.ofEpochMilli(pending.rideStartMs)
         val stride = Stride(token, null)
         var wait = FIRST_RETRY_MS
         // Give the Karoo a moment to upload before the first look.
