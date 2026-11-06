@@ -18,8 +18,11 @@ android {
         applicationId = "com.daviddokakis.karoointerval.stride"
         minSdk = 26
         targetSdk = 34
-        versionCode = 6
-        versionName = "0.5.1-stride"
+        // Each CI build gets a higher version, so the Companion app installs it as an update
+        // (GitHub's run number, above the upstream app's codes; local builds stay at 6).
+        val build = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
+        versionCode = build?.let { 100 + it } ?: 6
+        versionName = "0.5.1-stride" + (build?.let { ".$it" } ?: "")
     }
 
     signingConfigs {
