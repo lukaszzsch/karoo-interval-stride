@@ -332,6 +332,11 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
                     v.setTextViewText(R.id.next_value, summary(next))
                     v.setTextColor(R.id.next_value, color(R.color.text))
                 }
+                s.finishArmed -> {
+                    v.setViewVisibility(R.id.next_label, View.GONE)
+                    v.setTextViewText(R.id.next_value, context.getString(R.string.finish_confirm))
+                    v.setTextColor(R.id.next_value, color(R.color.text))
+                }
                 else -> {
                     v.setViewVisibility(R.id.next_label, View.GONE)
                     v.setTextViewText(R.id.next_value, context.getString(R.string.next_last))
@@ -359,7 +364,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             v.setViewVisibility(R.id.tiles_row, if (showConfirm || showCancelled) View.GONE else View.VISIBLE)
             // Buttons keep their space when hidden, so the text stays centred. While choosing,
             // both stay available so you can tap back and forth.
-            v.setViewVisibility(R.id.btn_skip, if (s.hasNext || choosing != null) View.VISIBLE else View.INVISIBLE)
+            // On the last interval ⏭ ends the workout (tap twice), until it's finished.
+            v.setViewVisibility(R.id.btn_skip, if (s.hasNext || choosing != null || !s.finished) View.VISIBLE else View.INVISIBLE)
             v.setViewVisibility(R.id.btn_previous, View.VISIBLE)
         }
         // The skip button is grey and not tappable while the ride or workout is paused, so the play
@@ -535,35 +541,57 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     private val nextTicker = Ticker()
 
     /**
-     * "[prefix] · [note]", with a note that's too long for [availPx] scrolled word by word, one
-     * word per redraw (the field redraws about once a second): it waits at the start, moves
-     * along until its end shows, waits there, then starts again.
+     * "[prefix] · [note]". A note too long for [availPx] scrolls word by word, one step per redraw
+     * (the field redraws about once a second): it waits at the start, moves along until its end
+     * shows, waits there, then starts again. When the prefix leaves too little room for a
+     * readable piece of the note, the line takes turns: the prefix alone, then the note across
+     * the whole width.
      */
     private fun ticker(t: Ticker, prefix: String, note: String?, availPx: Float, sp: Float, karoo: Boolean): String {
         if (note.isNullOrBlank()) return prefix
         val full = prefix + SEP + note
-        if (measure(full, sp, bold = !karoo, karoo = karoo) <= availPx) return full
+        val bold = !karoo
+        if (measure(full, sp, bold, karoo) <= availPx) return full
         val now = SystemClock.elapsedRealtime()
         // Keyed on the note only: the prefix's live cadence changes every second.
         if (t.text != note) {
             t.text = note
             t.since = now
         }
-        val room = availPx - measure(prefix + SEP + "\u2026", sp, bold = !karoo, karoo = karoo)
-        // Offsets where a word starts, up to the first from which the rest of the note fits.
-        val starts = mutableListOf(0)
-        for (i in 1 until note.length) {
-            if (note[i - 1] == ' ' && note[i] != ' ') {
-                if (measure(note.substring(starts.last()), sp, !karoo, karoo) <= room) break
-                starts += i
-            }
+        val beside = availPx - measure(prefix + SEP, sp, bold, karoo)
+        val frames: List<String> = if (beside >= availPx * BESIDE_MIN) {
+            noteWindows(note, beside, sp, karoo).let { w ->
+                List(HOLD) { w.first() } + w + List(HOLD) { w.last() }
+            }.map { prefix + SEP + it }
+        } else {
+            List(PREFIX_HOLD) { prefix } +
+                noteWindows(note, availPx, sp, karoo).let { w -> List(HOLD - 1) { w.first() } + w + List(HOLD) { w.last() } }
         }
-        if (starts.size == 1) return full // a single long word: leave it to the ellipsis
-        val frames = HOLD + starts.size - 1 + HOLD
-        val frame = ((now - t.since) / 1000L % frames).toInt()
-        val index = (frame - HOLD + 1).coerceIn(0, starts.size - 1)
-        val shown = note.substring(starts[index])
-        return prefix + SEP + (if (index > 0) "\u2026" else "") + shown
+        val frame = ((now - t.since) / 1000L % frames.size).toInt()
+        return frames[frame]
+    }
+
+    /**
+     * The note cut into pieces that fit [roomPx], each starting one word later than the one
+     * before ("…" marks text cut on either side), until the end of the note shows.
+     */
+    private fun noteWindows(note: String, roomPx: Float, sp: Float, karoo: Boolean): List<String> {
+        val words = note.split(' ').filter { it.isNotEmpty() }
+        val fits = { text: String -> measure(text, sp, !karoo, karoo) <= roomPx }
+        val out = mutableListOf<String>()
+        for (from in words.indices) {
+            var to = from + 1 // at least one word (the TextView ellipsizes a word too long alone)
+            while (to < words.size) {
+                val candidate = (if (from > 0) "\u2026" else "") + words.subList(from, to + 1).joinToString(" ") +
+                    (if (to + 1 < words.size) "\u2026" else "")
+                if (!fits(candidate)) break
+                to++
+            }
+            out += (if (from > 0) "\u2026" else "") + words.subList(from, to).joinToString(" ") +
+                (if (to < words.size) "\u2026" else "")
+            if (to >= words.size) break
+        }
+        return out.ifEmpty { listOf(note) }
     }
 
     private val measurePaint = TextPaint(TextPaint.ANTI_ALIAS_FLAG)
@@ -688,6 +716,10 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         private const val SEP = " \u00b7 "
         /** Redraws (about seconds) a scrolled note waits at its start and at its end. */
         private const val HOLD = 2
+        /** The prefix alone shows this many redraws when the line takes turns. */
+        private const val PREFIX_HOLD = 3
+        /** Below this share of the line, the note doesn't go beside the prefix. */
+        private const val BESIDE_MIN = 0.45f
         /** Gear and pause icons: 55% of the text colour. */
         private const val ICON_ALPHA = 140
         private const val REF_W_DP = 255f

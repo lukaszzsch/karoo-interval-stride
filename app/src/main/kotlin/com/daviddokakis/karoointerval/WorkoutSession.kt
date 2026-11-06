@@ -48,6 +48,16 @@ class WorkoutSession(
     private val lapNp = LapNp()
     private val freeLapNp = LapNp()
     private var countdownJob: Job? = null
+    private var finishArmJob: Job? = null
+
+    /** The workout is over (last interval done, or ended early with ⏭): one lap, a beep. */
+    private fun finishWorkout() {
+        val step = _state.value.currentStep ?: return
+        _state.update { it.copy(finished = true, finishArmed = false, elapsedInStepSec = step.durationSec) }
+        karoo.dispatch(MarkLap)
+        beep(GO_TONE)
+        store.clearProgress()
+    }
     /** Jump being chosen (3 s confirmation), see [jumpStops]. */
     private var selectionPos: Int? = null
     private var selectJob: Job? = null
@@ -174,6 +184,20 @@ class WorkoutSession(
         scope.launch {
             val st = _state.value
             if (st.plan == null) return@launch
+            // ⏭ on the last interval: end the workout early, after a second tap to confirm.
+            if (delta > 0 && !st.hasNext && !st.finished && selectionPos == null && countdownJob?.isActive != true) {
+                if (st.finishArmed) {
+                    finishArmJob?.cancel()
+                    finishWorkout()
+                } else {
+                    _state.update { it.copy(finishArmed = true) }
+                    finishArmJob = scope.launch {
+                        delay(FINISH_CONFIRM_MS)
+                        _state.update { it.copy(finishArmed = false) }
+                    }
+                }
+                return@launch
+            }
             if (countdownJob?.isActive == true) {
                 jumpNow()
                 return@launch
@@ -396,10 +420,7 @@ class WorkoutSession(
                 if (st.hasNext) {
                     goToStep(st.stepIndex + 1, natural = true)
                 } else {
-                    _state.update { it.copy(finished = true, elapsedInStepSec = step.durationSec) }
-                    karoo.dispatch(MarkLap)
-                    beep(GO_TONE)
-                    store.clearProgress()
+                    finishWorkout()
                 }
             } else {
                 _state.update { it.copy(elapsedInStepSec = (elapsedInStepMs / 1000).toInt()) }
@@ -513,6 +534,8 @@ class WorkoutSession(
 
         private val TICK_TONE = PlayBeepPattern.Tone(frequency = 2000, durationMs = 100)
         private val WARN_TONE = PlayBeepPattern.Tone(frequency = 1500, durationMs = 80)
+        /** How long the "tap ⏭ again to end the workout" prompt waits. */
+        private const val FINISH_CONFIRM_MS = 4_000L
         private val GO_TONE = PlayBeepPattern.Tone(frequency = 3000, durationMs = 400)
         private val CANCEL_TONE = PlayBeepPattern.Tone(frequency = 1000, durationMs = 200)
     }

@@ -12,6 +12,8 @@ data class ScreenState(
     val cadence: Int? = null,
     /** This ride's rating ("RPE 7 · Dobrze"), or null when not rated. */
     val ratingSummary: String? = null,
+    /** ⏭ was tapped on the last interval: tap again within a few seconds to end the workout. */
+    val finishArmed: Boolean = false,
     /** 0-based index of the current step. */
     val stepIndex: Int = 0,
     val elapsedInStepSec: Int = 0,
