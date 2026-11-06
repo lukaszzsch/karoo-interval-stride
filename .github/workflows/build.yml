@@ -18,7 +18,7 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew :app:assembleRelease
-          cp app/build/outputs/apk/release/*.apk interval-screen-stride.apk
+          cp "$(find . -path "*outputs/apk/release/*.apk" | head -1)" interval-screen-stride.apk
       - uses: actions/upload-artifact@v4
         with:
           name: interval-screen-stride
