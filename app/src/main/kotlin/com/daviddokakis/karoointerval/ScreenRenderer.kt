@@ -514,7 +514,10 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         val text = ticker(intervalTicker, prefix, step?.note, avail, 13f, s.karooStyle)
         val state = if (live != null) step?.cadenceState(live) else null
         if (liveText == null || state == null) return text
+        // Colour the live rpm only when this frame shows it: when the line takes turns, a frame
+        // with just the step's note must stay plain.
         val start = counter.length + SEP.length
+        if (!text.startsWith(counter + SEP + liveText)) return text
         return android.text.SpannableString(text).apply {
             val c = color(
                 when (state) {
