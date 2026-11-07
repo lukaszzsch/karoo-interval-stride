@@ -82,4 +82,8 @@
     <!-- Countdown (regular style): the darker blue it fills with, and "Jumping to" on the pale blue -->
     <color name="countdown_fill">#FF85B7EB</color>
     <color name="countdown_sub">#FF2E5A85</color>
+    <!-- ERG connection banners -->
+    <color name="erg_alert_ok">#FF129A5E</color>
+    <color name="erg_alert_warn">#FFB3261E</color>
+    <color name="erg_alert_text">#FFFFFFFF</color>
 </resources>

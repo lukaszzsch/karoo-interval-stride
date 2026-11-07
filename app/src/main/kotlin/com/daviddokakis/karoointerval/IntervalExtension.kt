@@ -6,6 +6,7 @@ import io.hammerhead.karooext.extension.KarooExtension
 import io.hammerhead.karooext.internal.Emitter
 import io.hammerhead.karooext.models.ActiveRideProfile
 import io.hammerhead.karooext.models.FitEffect
+import io.hammerhead.karooext.models.InRideAlert
 import io.hammerhead.karooext.models.RideState
 import io.hammerhead.karooext.models.SystemNotification
 import io.hammerhead.karooext.models.WriteToSessionMesg
@@ -222,6 +223,8 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
             var sent: Int? = null
             var released = false
             var retryAt = 0L
+            var sentAt = 0L
+            var warnedAt = 0L
             fun drop() {
                 trainer?.close()
                 trainer = null
@@ -245,6 +248,9 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
                                 val t = FtmsTrainer(this@IntervalExtension, w.address)
                                 trainer = t
                                 t.open()
+                                // Tell the rider the trainer is driven now (the first seconds of a ride).
+                                ergAlert(getString(R.string.erg_alert_connected), getString(R.string.erg_alert_connected_detail, settings.trainer.value?.second ?: ""), ok = true)
+                                warnedAt = 0L
                             }
                         }
                         val t = trainer
@@ -254,9 +260,12 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
                                     t.resume()
                                     released = false
                                 }
-                                if (sent != w.watts) {
+                                // Send on every change, and again every 15 s in case the trainer missed one.
+                                val now = System.currentTimeMillis()
+                                if (sent != w.watts || now - sentAt >= ERG_RESEND_MS) {
                                     t.setTargetPower(w.watts)
                                     sent = w.watts
+                                    sentAt = now
                                 }
                                 workout.setErgActive(true)
                             } else if (!released) {
@@ -271,11 +280,31 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
                     Timber.w(e, "ERG failed")
                     drop()
                     retryAt = System.currentTimeMillis() + ERG_RETRY_MS
+                    // The workout runs but the trainer can't be reached: say so (at most once a minute).
+                    if (System.currentTimeMillis() - warnedAt >= ERG_WARN_EVERY_MS) {
+                        warnedAt = System.currentTimeMillis()
+                        ergAlert(getString(R.string.erg_alert_failed), getString(R.string.erg_alert_failed_detail), ok = false)
+                    }
                 }
                 connected.value = trainer?.isUp == true
                 delay(ERG_TICK_MS)
             }
         }
+    }
+
+    /** A 5-second banner over the ride screens about the trainer connection. */
+    private fun ergAlert(title: String, detail: String, ok: Boolean) {
+        karoo.dispatch(
+            InRideAlert(
+                id = "erg-${System.currentTimeMillis()}",
+                icon = R.drawable.ic_bolt_filled,
+                title = title,
+                detail = detail,
+                autoDismissMs = 5_000L,
+                backgroundColor = if (ok) R.color.erg_alert_ok else R.color.erg_alert_warn,
+                textColor = R.color.erg_alert_text,
+            ),
+        )
     }
 
     /** Writes the rating into the ride's FIT session whenever it changes while a ride is open. */
@@ -309,6 +338,8 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
         private const val NOTIFICATION_SYNC = "ride_rating_sync"
         private const val ERG_TICK_MS = 1_000L
         private const val ERG_RETRY_MS = 10_000L
+        private const val ERG_RESEND_MS = 15_000L
+        private const val ERG_WARN_EVERY_MS = 60_000L
         private const val FIRST_RETRY_MS = 30_000L
         private const val MAX_RETRY_MS = 10 * 60_000L
         private const val GIVE_UP_MS = 12 * 60 * 60_000L
