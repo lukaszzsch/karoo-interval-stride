@@ -4,6 +4,7 @@ import io.hammerhead.karooext.KarooSystemService
 import io.hammerhead.karooext.extension.DataTypeImpl
 import io.hammerhead.karooext.extension.KarooExtension
 import io.hammerhead.karooext.internal.Emitter
+import io.hammerhead.karooext.models.ActiveRideProfile
 import io.hammerhead.karooext.models.FitEffect
 import io.hammerhead.karooext.models.RideState
 import io.hammerhead.karooext.models.SystemNotification
@@ -183,12 +184,24 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
     private fun startErg() {
         val settings = ErgSettings.get(this)
         val wanted = MutableStateFlow(ErgWanted(null, false, null))
+        /** The trainer is connected and under control right now. */
+        val connected = MutableStateFlow(false)
+        // The active ride profile decides whether ERG applies (indoor profiles, or the chosen ones).
+        scope.launch {
+            karoo.consumerFlow<ActiveRideProfile>().collect { e ->
+                settings.profileActive(ErgSettings.Profile(e.profile.id, e.profile.name, e.profile.indoor))
+            }
+        }
+        val allowed = combine(settings.profiles, settings.activeProfileId, settings.onlyChosen, settings.chosen) { list, active, _, _ ->
+            settings.allowedIn(list.firstOrNull { it.id == active })
+        }
         // Today's intensity: on screen and in ERG (st.target is already scaled); back to 100%
         // when the ride ends, so a weak day doesn't carry over.
         // Only with a trainer in ERG: otherwise targets stay as planned.
         scope.launch {
-            combine(settings.intensity, settings.enabled, settings.trainer) { pct, on, trainer ->
-                if (on && trainer != null) pct else 100
+            // Only while the trainer is actually connected: outdoors the targets stay as planned.
+            combine(settings.intensity, settings.enabled, settings.trainer, allowed, connected) { pct, on, trainer, ok, up ->
+                if (on && trainer != null && ok && up) pct else 100
             }.collect { workout.setIntensity(it) }
         }
         scope.launch {
@@ -196,9 +209,9 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
                 .collect { if (workout.state.value.workoutLoaded || settings.intensity.value != 100) settings.setIntensity(100) }
         }
         scope.launch {
-            combine(workout.state, karoo.consumerFlow<RideState>(), settings.enabled, settings.trainer) { st, ride, on, trainer ->
+            combine(workout.state, karoo.consumerFlow<RideState>(), settings.enabled, settings.trainer, allowed) { st, ride, on, trainer, ok ->
                 ErgWanted(
-                    address = if (on) trainer?.first else null,
+                    address = if (on && ok) trainer?.first else null,
                     active = ride !is RideState.Idle && st.workoutLoaded && !st.finished,
                     watts = if (ride is RideState.Recording && !st.workoutPaused) st.target?.takeIf { it > 0 } else null,
                 )
@@ -259,6 +272,7 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
                     drop()
                     retryAt = System.currentTimeMillis() + ERG_RETRY_MS
                 }
+                connected.value = trainer?.isUp == true
                 delay(ERG_TICK_MS)
             }
         }

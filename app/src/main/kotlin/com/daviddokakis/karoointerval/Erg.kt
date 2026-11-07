@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
+import org.json.JSONObject
 import timber.log.Timber
 import java.util.UUID
 
@@ -42,6 +43,69 @@ class ErgSettings private constructor(context: Context) {
         _intensity.value = v
     }
 
+    /** A Karoo ride profile seen in use: its name and whether it's marked indoor. */
+    data class Profile(val id: String, val name: String, val indoor: Boolean)
+
+    private val _profiles = MutableStateFlow(readProfiles())
+    /** Ride profiles seen so far (the Karoo only tells extensions about the active one). */
+    val profiles: StateFlow<List<Profile>> = _profiles
+
+    private val _activeProfileId = MutableStateFlow(prefs.getString(KEY_ACTIVE, null))
+    /** The profile active on the Karoo now (last seen). */
+    val activeProfileId: StateFlow<String?> = _activeProfileId
+
+    private val _onlyChosen = MutableStateFlow(prefs.getBoolean(KEY_ONLY_CHOSEN, false))
+    /** False: ERG in every indoor profile. True: only in the profiles picked in [chosen]. */
+    val onlyChosen: StateFlow<Boolean> = _onlyChosen
+
+    private val _chosen = MutableStateFlow(prefs.getStringSet(KEY_CHOSEN, emptySet())!!.toSet())
+    val chosen: StateFlow<Set<String>> = _chosen
+
+    /** Whether ERG may drive the trainer in [profile] (null: profile unknown yet → no). */
+    fun allowedIn(profile: Profile?): Boolean = when {
+        profile == null -> false
+        _onlyChosen.value -> profile.id in _chosen.value
+        else -> profile.indoor
+    }
+
+    /** ERG is on, a trainer is chosen, and the active profile allows it. */
+    val usableNow: Boolean
+        get() = _enabled.value && _trainer.value != null &&
+            allowedIn(_profiles.value.firstOrNull { it.id == _activeProfileId.value })
+
+    fun profileActive(profile: Profile) {
+        if (_activeProfileId.value != profile.id) {
+            prefs.edit().putString(KEY_ACTIVE, profile.id).apply()
+            _activeProfileId.value = profile.id
+        }
+        if (_profiles.value.none { it == profile }) {
+            val list = _profiles.value.filter { it.id != profile.id } + profile
+            prefs.edit().putString(KEY_PROFILES, JSONObject().apply {
+                list.forEach { put(it.id, JSONObject().put("name", it.name).put("indoor", it.indoor)) }
+            }.toString()).apply()
+            _profiles.value = list
+        }
+    }
+
+    fun setOnlyChosen(on: Boolean) {
+        prefs.edit().putBoolean(KEY_ONLY_CHOSEN, on).apply()
+        _onlyChosen.value = on
+    }
+
+    fun toggleChosen(id: String) {
+        val set = _chosen.value.let { if (id in it) it - id else it + id }
+        prefs.edit().putStringSet(KEY_CHOSEN, set).apply()
+        _chosen.value = set
+    }
+
+    private fun readProfiles(): List<Profile> = runCatching {
+        val o = JSONObject(prefs.getString(KEY_PROFILES, "{}")!!)
+        o.keys().asSequence().map { id ->
+            val p = o.getJSONObject(id)
+            Profile(id, p.optString("name", id), p.optBoolean("indoor"))
+        }.toList()
+    }.getOrDefault(emptyList())
+
     fun setEnabled(on: Boolean) {
         prefs.edit().putBoolean(KEY_ENABLED, on).apply()
         _enabled.value = on
@@ -57,6 +121,10 @@ class ErgSettings private constructor(context: Context) {
         private const val KEY_ADDRESS = "address"
         private const val KEY_NAME = "name"
         private const val KEY_INTENSITY = "intensity"
+        private const val KEY_PROFILES = "profiles"
+        private const val KEY_ACTIVE = "active_profile"
+        private const val KEY_ONLY_CHOSEN = "only_chosen"
+        private const val KEY_CHOSEN = "chosen_profiles"
         const val MIN_INTENSITY = 50
         const val MAX_INTENSITY = 150
 

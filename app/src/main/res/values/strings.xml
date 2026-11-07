@@ -24,6 +24,14 @@
     <string name="erg_control">Sterowanie ERG</string>
     <string name="erg_help">Aplikacja ustawia trenażer przez Bluetooth na cel każdego interwału. Na Karoo trenażer zostaw połączony przez ANT+ w trybie Read-Only, żeby Karoo nim nie sterowało.</string>
     <string name="erg_trainer">Trenażer</string>
+    <string name="erg_profiles">Profile z ERG</string>
+    <string name="erg_profiles_indoor">Indoor</string>
+    <string name="erg_profiles_chosen">Wybrane</string>
+    <string name="erg_profiles_indoor_help">ERG działa w profilach jazdy oznaczonych na Karoo jako indoor.</string>
+    <string name="erg_profiles_chosen_help">ERG działa tylko w zaznaczonych profilach. Profil pojawia się na liście, gdy raz go wybierzesz na Karoo.</string>
+    <string name="erg_profiles_none">Brak profili. Wybierz profil na ekranie startowym Karoo i wróć tutaj.</string>
+    <string name="erg_profile_active_on">Bieżący profil: %1$s · ERG działa</string>
+    <string name="erg_profile_active_off">Bieżący profil: %1$s · ERG wyłączony</string>
     <string name="erg_no_trainer">Nie wybrano trenażera</string>
     <string name="erg_scan">Szukaj trenażera</string>
     <string name="erg_scanning">Szukam…</string>

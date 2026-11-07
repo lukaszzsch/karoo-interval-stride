@@ -78,6 +78,44 @@ class TrainerActivity : AppearanceActivity() {
         form.addView(settingsHelp(getString(R.string.erg_help)))
         form.addView(settingsDivider())
 
+        // Where ERG applies: every indoor profile, or only the profiles picked here.
+        form.addView(settingsHeading(R.drawable.ic_bolt_filled, getString(R.string.erg_profiles)))
+        form.addView(
+            segmented(listOf(R.string.erg_profiles_indoor to false, R.string.erg_profiles_chosen to true), erg.onlyChosen.value) { only ->
+                erg.setOnlyChosen(only)
+                render()
+            },
+        )
+        val profiles = erg.profiles.value
+        if (erg.onlyChosen.value) {
+            if (profiles.isEmpty()) form.addView(settingsHelp(getString(R.string.erg_profiles_none)))
+            for (p in profiles.sortedBy { it.name.lowercase() }) {
+                val on = p.id in erg.chosen.value
+                form.addView(
+                    button((if (on) "✓ " else "") + p.name + if (p.indoor) " (indoor)" else "", primary = on) {
+                        erg.toggleChosen(p.id)
+                        render()
+                    }.apply {
+                        layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(6) }
+                    },
+                )
+            }
+            form.addView(settingsHelp(getString(R.string.erg_profiles_chosen_help)))
+        } else {
+            form.addView(settingsHelp(getString(R.string.erg_profiles_indoor_help)))
+        }
+        profiles.firstOrNull { it.id == erg.activeProfileId.value }?.let { active ->
+            form.addView(
+                settingsHelp(
+                    getString(
+                        if (erg.allowedIn(active)) R.string.erg_profile_active_on else R.string.erg_profile_active_off,
+                        active.name,
+                    ),
+                ),
+            )
+        }
+        form.addView(settingsDivider())
+
         form.addView(settingsRowTitle(getString(R.string.erg_trainer)).apply { setPadding(0, dp(12), 0, 0) })
         form.addView(settingsHelp(erg.trainer.value?.let { "${it.second} (${it.first})" } ?: getString(R.string.erg_no_trainer)))
 

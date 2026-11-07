@@ -266,7 +266,7 @@ class SetupActivity : AppearanceActivity() {
                     addView(rateButton())
                     // Today's intensity: only with a trainer in ERG.
                     ErgSettings.get(this@SetupActivity).let { erg ->
-                        if (erg.enabled.value && erg.trainer.value != null) addView(intensityRow())
+                        if (erg.usableNow) addView(intensityRow())
                     }
                 },
             )
