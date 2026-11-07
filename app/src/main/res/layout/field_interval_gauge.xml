@@ -149,7 +149,9 @@
                     android:layout_height="wrap_content"
                     android:text="@string/lap_avg"
                     android:textColor="@color/text_secondary"
-                    android:textSize="11sp" />
+                    android:textSize="11sp"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
 
                 <TextView
                     android:id="@+id/lap_avg"
@@ -195,7 +197,9 @@
                         android:contentDescription="@string/cd_heart_rate"
                         android:text="@string/hr"
                         android:textColor="@color/text_secondary"
-                        android:textSize="11sp" />
+                        android:textSize="11sp"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
                 </LinearLayout>
 
                 <TextView
@@ -227,7 +231,9 @@
                     android:layout_height="wrap_content"
                     android:text="@string/cadence"
                     android:textColor="@color/text_secondary"
-                    android:textSize="11sp" />
+                    android:textSize="11sp"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
 
                 <TextView
                     android:id="@+id/cad_value"
@@ -599,7 +605,9 @@
                 android:includeFontPadding="false"
                 android:text="@string/target"
                 android:textColor="@color/text_secondary"
-                android:textSize="11sp" />
+                android:textSize="11sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
 
             <TextView
                 android:id="@+id/target"

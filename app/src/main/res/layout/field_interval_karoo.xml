@@ -227,7 +227,8 @@
                         android:text="@string/lap_avg"
                         android:textAllCaps="true"
                         android:textColor="@color/text"
-                        android:textSize="13sp" />
+                        android:textSize="13sp"
+                        android:ellipsize="end" />
                 </LinearLayout>
 
                 <TextView
@@ -283,7 +284,8 @@
                         android:text="@string/target"
                         android:textAllCaps="true"
                         android:textColor="@color/text"
-                        android:textSize="13sp" />
+                        android:textSize="13sp"
+                        android:ellipsize="end" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -350,7 +352,8 @@
                         android:text="@string/cadence"
                         android:textAllCaps="true"
                         android:textColor="@color/text"
-                        android:textSize="13sp" />
+                        android:textSize="13sp"
+                        android:ellipsize="end" />
                 </LinearLayout>
 
                 <TextView
