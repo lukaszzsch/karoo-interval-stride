@@ -19,6 +19,7 @@
     <string name="np">NP okr.</string>
     <string name="target">Cel</string>
     <string name="target_erg">Cel · ERG</string>
+    <string name="intensity_value">Intensywność %1$d%%</string>
     <string name="erg_title">Trenażer (ERG)</string>
     <string name="erg_control">Sterowanie ERG</string>
     <string name="erg_help">Aplikacja ustawia trenażer przez Bluetooth na cel każdego interwału. Na Karoo trenażer zostaw połączony przez ANT+ w trybie Read-Only, żeby Karoo nim nie sterowało.</string>

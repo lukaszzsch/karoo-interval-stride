@@ -32,6 +32,16 @@ class ErgSettings private constructor(context: Context) {
     /** Address and name of the trainer, or null when none is chosen. */
     val trainer: StateFlow<Pair<String, String>?> = _trainer
 
+    private val _intensity = MutableStateFlow(prefs.getInt(KEY_INTENSITY, 100))
+    /** Today's intensity in %: all targets (and ERG) at this share of the plan. */
+    val intensity: StateFlow<Int> = _intensity
+
+    fun setIntensity(pct: Int) {
+        val v = pct.coerceIn(MIN_INTENSITY, MAX_INTENSITY)
+        prefs.edit().putInt(KEY_INTENSITY, v).apply()
+        _intensity.value = v
+    }
+
     fun setEnabled(on: Boolean) {
         prefs.edit().putBoolean(KEY_ENABLED, on).apply()
         _enabled.value = on
@@ -46,6 +56,9 @@ class ErgSettings private constructor(context: Context) {
         private const val KEY_ENABLED = "enabled"
         private const val KEY_ADDRESS = "address"
         private const val KEY_NAME = "name"
+        private const val KEY_INTENSITY = "intensity"
+        const val MIN_INTENSITY = 50
+        const val MAX_INTENSITY = 150
 
         @Volatile
         private var instance: ErgSettings? = null

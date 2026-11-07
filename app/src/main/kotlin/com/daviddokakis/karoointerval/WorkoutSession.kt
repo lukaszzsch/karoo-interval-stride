@@ -160,6 +160,11 @@ class WorkoutSession(
         _state.update { it.copy(wattsMode = store.wattsMode, targetShowsRange = store.targetShowsRange, lapShowsNp = store.lapShowsNp, hrShowsLap = store.hrShowsLap) }
     }
 
+    /** Today's intensity in % (targets and ERG follow it). */
+    fun setIntensity(pct: Int) {
+        if (_state.value.intensityPct != pct) _state.update { it.copy(intensityPct = pct) }
+    }
+
     /** Whether the trainer is in ERG at the target (shown as "Cel · ERG"). */
     fun setErgActive(active: Boolean) {
         if (_state.value.ergActive != active) _state.update { it.copy(ergActive = active) }

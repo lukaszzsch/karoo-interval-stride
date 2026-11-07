@@ -183,6 +183,25 @@ class SetupActivity : AppearanceActivity() {
         }
     }
 
+    /** Today's intensity: "Intensywność 95%" with − / + in 1% steps (targets and ERG follow). */
+    private fun intensityRow(): LinearLayout {
+        val erg = ErgSettings.get(this)
+        val value = text(getString(R.string.intensity_value, erg.intensity.value), 17f, bold = true)
+        fun change(by: Int) {
+            erg.setIntensity(erg.intensity.value + by)
+            value.text = getString(R.string.intensity_value, erg.intensity.value)
+        }
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                .apply { topMargin = dp(8) }
+            addView(value, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            addView(button("\u2212", primary = false) { change(-1) }, LinearLayout.LayoutParams(dp(64), LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(6) })
+            addView(button("+", primary = false) { change(+1) }, LinearLayout.LayoutParams(dp(64), LinearLayout.LayoutParams.WRAP_CONTENT))
+        }
+    }
+
     /** "Rate the ride (RPE)", or the current rating; opens the rating page. */
     private fun rateButton() = button(
         RatingStore.get(this).rating.value.summary(this)?.let { getString(R.string.rate_button_rated, it) }
@@ -245,6 +264,7 @@ class SetupActivity : AppearanceActivity() {
                         }.apply { (layoutParams as LinearLayout.LayoutParams).topMargin = dp(8) },
                     )
                     addView(rateButton())
+                    addView(intensityRow())
                 },
             )
         }

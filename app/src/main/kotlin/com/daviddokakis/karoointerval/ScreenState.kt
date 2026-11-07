@@ -16,6 +16,8 @@ data class ScreenState(
     val finishArmed: Boolean = false,
     /** The trainer is holding the target in ERG. */
     val ergActive: Boolean = false,
+    /** Today's intensity: every target at this % of the plan (100 = as planned). */
+    val intensityPct: Int = 100,
     /** 0-based index of the current step. */
     val stepIndex: Int = 0,
     val elapsedInStepSec: Int = 0,
@@ -107,8 +109,12 @@ data class ScreenState(
         }
     }
 
-    val target: Int? get() = currentStep?.takeIf { it.hasTarget }?.targetAt(elapsedInStepSec)
+    val target: Int? get() = currentStep?.takeIf { it.hasTarget }?.targetAt(elapsedInStepSec)?.let(::scaled)
     val targetRange: IntRange? get() = currentStep?.takeIf { it.hasTarget }?.rangeAt(elapsedInStepSec)
+        ?.let { scaled(it.first)..scaled(it.last) }
+
+    /** [watts] at today's [intensityPct] (95% on a weaker day). */
+    fun scaled(watts: Int): Int = if (intensityPct == 100) watts else Math.round(watts * intensityPct / 100f)
 }
 
 /** Tap the watts to cycle: plain → coloured number → coloured background → both → plain. */

@@ -303,13 +303,18 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
                 v.setTextViewText(R.id.target, s.target?.toString() ?: "--")
             }
             // The trainer holds this target in ERG.
-            if (s.ergActive) v.setTextViewText(R.id.target_label, context.getString(R.string.target_erg))
+            // The trainer holds this target in ERG; a changed intensity shows as "95%".
+            val pct = if (s.intensityPct != 100) " ${s.intensityPct}%" else ""
+            when {
+                s.ergActive -> v.setTextViewText(R.id.target_label, context.getString(R.string.target_erg) + pct)
+                pct.isNotEmpty() -> v.setTextViewText(R.id.target_label, context.getString(R.string.target) + pct)
+            }
             v.setOnClickPendingIntent(R.id.target_tile, targetToggleIntent)
         }
         // Where a jump would land (being chosen or counting down): shown next to the target.
         val land = s.landStep
         if (land != null) {
-            val next = "→ ${land.targetAt(0)}"
+            val next = "→ ${s.scaled(land.targetAt(0))}"
             v.setTextViewText(
                 R.id.target_next,
                 // The number in the text colour; only the arrow in the jump colour (Karoo purple, or blue).
