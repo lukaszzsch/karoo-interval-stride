@@ -12,7 +12,7 @@ import kotlin.math.ceil
  * Draws the workout profile in zone colours: one bar per step
  * (width = duration, height = watts).
  *
- * - [Style.SCREEN] (interval screen): watt guide lines, finished steps grey, the current step
+ * - [Style.SCREEN] (interval screen): watt guide lines, ridden parts whitened, the current step
  *   outlined, a "now" marker, the step a jump lands on in solid blue with a ▼, time labels.
  *   Supports zooming into the current step.
  * - [Style.CARD] (workout list thumbnail): bars only, transparent background.
@@ -22,6 +22,12 @@ class ChartRenderer(private val context: Context) {
     enum class Style { SCREEN, CARD }
 
     private fun color(id: Int) = ContextCompat.getColor(context, id)
+
+    /** [c] mixed 60% toward white: how ridden parts of the profile look. */
+    private fun whitened(c: Int): Int {
+        fun mix(v: Int) = (v + (255 - v) * 0.6f).toInt()
+        return android.graphics.Color.argb(255, mix(android.graphics.Color.red(c)), mix(android.graphics.Color.green(c)), mix(android.graphics.Color.blue(c)))
+    }
 
     fun render(state: ScreenState, width: Int, height: Int, scale: Float, look: Style = Style.SCREEN): Bitmap {
         val card = look == Style.CARD
@@ -109,18 +115,27 @@ class ChartRenderer(private val context: Context) {
                 close()
             }
             val bar = Zones.barStyle(step.avgWatts, ftp)
-            // Finished steps turn grey; the jump target is solid blue.
+            // Everything already ridden is whitened (its zone colour 60% toward white): finished
+            // steps whole, the current step up to the "now" marker. The jump target is solid blue.
             val done = !card && i < state.stepIndex
             val isTarget = !card && i == state.landTarget
             val alpha = 255
-            fill.color = color(
-                when {
-                    isTarget -> landColor
-                    done -> R.color.done
-                    else -> bar.fill
-                },
-            )
+            fill.color = when {
+                isTarget -> color(landColor)
+                done -> whitened(color(bar.fill))
+                else -> color(bar.fill)
+            }
             canvas.drawPath(path, fill)
+            if (!card && !isTarget && i == state.stepIndex) {
+                val nx = x((t + state.elapsedInStepSec).coerceAtMost(t + step.durationSec))
+                if (nx > x0) {
+                    canvas.save()
+                    canvas.clipRect(x0, 0f, nx, bottom)
+                    fill.color = whitened(color(bar.fill))
+                    canvas.drawPath(path, fill)
+                    canvas.restore()
+                }
+            }
             bar.edge?.let { edge ->
                 // Karoo draws easy bars with a bright outline, just inside the bar.
                 val inset = edgePaint.strokeWidth / 2
