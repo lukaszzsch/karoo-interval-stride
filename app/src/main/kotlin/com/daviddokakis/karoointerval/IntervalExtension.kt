@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import java.time.Instant
 
@@ -48,6 +49,7 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
         karoo.connect { connected -> Timber.i("Karoo system connected: $connected") }
         workout.start()
         startRating()
+        startErg()
 
         // Refresh this week's list in the background so it's ready when the rider picks a workout.
         if (store.hasCredentials) {
@@ -170,6 +172,86 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
         )
     }
 
+    /** What the trainer should do now: hold [watts], let go (null), or not be driven at all. */
+    private data class ErgWanted(val address: String?, val active: Boolean, val watts: Int?)
+
+    /**
+     * ERG: while a workout runs in a ride and ERG is on, drives the chosen trainer over Bluetooth
+     * FTMS to the current target; lets go of the resistance on pauses and steps without a target,
+     * and disconnects when the workout ends. Checked once a second, reconnecting after a drop.
+     */
+    private fun startErg() {
+        val settings = ErgSettings.get(this)
+        val wanted = MutableStateFlow(ErgWanted(null, false, null))
+        scope.launch {
+            combine(workout.state, karoo.consumerFlow<RideState>(), settings.enabled, settings.trainer) { st, ride, on, trainer ->
+                ErgWanted(
+                    address = if (on) trainer?.first else null,
+                    active = ride !is RideState.Idle && st.workoutLoaded && !st.finished,
+                    watts = if (ride is RideState.Recording && !st.workoutPaused) st.target?.takeIf { it > 0 } else null,
+                )
+            }.collect { wanted.value = it }
+        }
+        scope.launch {
+            var trainer: FtmsTrainer? = null
+            var sent: Int? = null
+            var released = false
+            var retryAt = 0L
+            fun drop() {
+                trainer?.close()
+                trainer = null
+                sent = null
+                released = false
+                workout.setErgActive(false)
+            }
+            while (true) {
+                val w = wanted.value
+                try {
+                    if (w.address == null || !w.active || !ErgSettings.hasPermissions(this@IntervalExtension)) {
+                        if (trainer != null) {
+                            runCatching { trainer?.pause() }
+                            drop()
+                        }
+                    } else {
+                        if (trainer?.isUp != true) {
+                            if (trainer != null) drop()
+                            if (System.currentTimeMillis() >= retryAt) {
+                                Timber.i("ERG: connecting to ${w.address}")
+                                val t = FtmsTrainer(this@IntervalExtension, w.address)
+                                trainer = t
+                                t.open()
+                            }
+                        }
+                        val t = trainer
+                        if (t != null && t.isUp) {
+                            if (w.watts != null) {
+                                if (released) {
+                                    t.resume()
+                                    released = false
+                                }
+                                if (sent != w.watts) {
+                                    t.setTargetPower(w.watts)
+                                    sent = w.watts
+                                }
+                                workout.setErgActive(true)
+                            } else if (!released) {
+                                t.pause()
+                                released = true
+                                sent = null
+                                workout.setErgActive(false)
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    Timber.w(e, "ERG failed")
+                    drop()
+                    retryAt = System.currentTimeMillis() + ERG_RETRY_MS
+                }
+                delay(ERG_TICK_MS)
+            }
+        }
+    }
+
     /** Writes the rating into the ride's FIT session whenever it changes while a ride is open. */
     override fun startFit(emitter: Emitter<FitEffect>) {
         val job = scope.launch {
@@ -199,6 +281,8 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
         const val ACTION_PAUSE = "pause"
         private const val NOTIFICATION_RATE = "ride_rating"
         private const val NOTIFICATION_SYNC = "ride_rating_sync"
+        private const val ERG_TICK_MS = 1_000L
+        private const val ERG_RETRY_MS = 10_000L
         private const val FIRST_RETRY_MS = 30_000L
         private const val MAX_RETRY_MS = 10 * 60_000L
         private const val GIVE_UP_MS = 12 * 60 * 60_000L

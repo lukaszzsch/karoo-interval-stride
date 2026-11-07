@@ -14,6 +14,8 @@ data class ScreenState(
     val ratingSummary: String? = null,
     /** ⏭ was tapped on the last interval: tap again within a few seconds to end the workout. */
     val finishArmed: Boolean = false,
+    /** The trainer is holding the target in ERG. */
+    val ergActive: Boolean = false,
     /** 0-based index of the current step. */
     val stepIndex: Int = 0,
     val elapsedInStepSec: Int = 0,

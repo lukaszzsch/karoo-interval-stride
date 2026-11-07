@@ -302,6 +302,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
                 v.setTextViewText(R.id.target_label, context.getString(R.string.target))
                 v.setTextViewText(R.id.target, s.target?.toString() ?: "--")
             }
+            // The trainer holds this target in ERG.
+            if (s.ergActive) v.setTextViewText(R.id.target_label, context.getString(R.string.target_erg))
             v.setOnClickPendingIntent(R.id.target_tile, targetToggleIntent)
         }
         // Where a jump would land (being chosen or counting down): shown next to the target.

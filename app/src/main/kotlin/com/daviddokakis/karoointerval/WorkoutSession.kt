@@ -160,6 +160,11 @@ class WorkoutSession(
         _state.update { it.copy(wattsMode = store.wattsMode, targetShowsRange = store.targetShowsRange, lapShowsNp = store.lapShowsNp, hrShowsLap = store.hrShowsLap) }
     }
 
+    /** Whether the trainer is in ERG at the target (shown as "Cel · ERG"). */
+    fun setErgActive(active: Boolean) {
+        if (_state.value.ergActive != active) _state.update { it.copy(ergActive = active) }
+    }
+
     /** The ride's rating, shown with "Workout complete". */
     fun setRatingSummary(summary: String?) {
         _state.update { it.copy(ratingSummary = summary) }

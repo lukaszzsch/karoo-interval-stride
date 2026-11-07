@@ -103,6 +103,34 @@ class SettingsActivity : AppearanceActivity() {
         )
         form.addView(settingsDivider())
 
+        // Smart trainer (ERG over Bluetooth): one row, opens the Trainer page
+        val erg = ErgSettings.get(this)
+        val ergStatus = when {
+            !erg.enabled.value -> getString(R.string.off)
+            erg.trainer.value == null -> getString(R.string.erg_no_trainer)
+            else -> erg.trainer.value!!.second
+        }
+        form.addView(
+            LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                minimumHeight = dp(56)
+                isClickable = true
+                setOnClickListener { startActivity(Intent(this@SettingsActivity, TrainerActivity::class.java)) }
+                addView(settingsIcon(R.drawable.ic_bolt_filled))
+                addView(
+                    LinearLayout(this@SettingsActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        addView(settingsRowTitle(getString(R.string.erg_title)))
+                        addView(settingsHelp(ergStatus).apply { setPadding(0, 0, 0, 0) })
+                    },
+                    LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f),
+                )
+                addView(settingsIcon(R.drawable.ic_chevron))
+            },
+        )
+        form.addView(settingsDivider())
+
         // The first-run introduction, again (e.g. to see how to add the field to a profile)
         form.addView(
             LinearLayout(this).apply {

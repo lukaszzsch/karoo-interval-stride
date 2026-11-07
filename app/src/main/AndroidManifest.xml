@@ -4,6 +4,13 @@
 
     <!-- Loads planned workouts from Stride -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- ERG: drive a smart trainer over Bluetooth FTMS -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" tools:targetApi="s" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
     <!-- To tell the rider to enable Wi-Fi when there's no connection to sync over -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- To sync as soon as Wi-Fi connects -->
@@ -51,6 +58,11 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".TrainerActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme" />
 
         <activity
             android:name=".AccountActivity"
