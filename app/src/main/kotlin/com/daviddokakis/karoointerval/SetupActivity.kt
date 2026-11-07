@@ -294,7 +294,10 @@ class SetupActivity : AppearanceActivity() {
             content.addView(text(getString(R.string.none_this_week), 14f, secondary = true))
         }
         val today = LocalDate.now()
-        week.groupBy { it.date }.toSortedMap().forEach { (date, workouts) ->
+        // Today first, then the days still to come, then the days already past.
+        val days = week.groupBy { it.date }.toSortedMap()
+        val order = days.keys.sortedWith(compareBy({ if (it == today) 0 else if (it > today) 1 else 2 }, { it }))
+        order.map { it to days.getValue(it) }.forEach { (date, workouts) ->
             val label = if (date == today) getString(R.string.today_label, date.format(DAY_FORMAT)) else date.format(DAY_FORMAT)
             content.addView(
                 text(label, 14f, bold = date == today, secondary = date != today).apply {
