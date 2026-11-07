@@ -141,7 +141,8 @@
                 android:background="@drawable/bg_tile_tonal"
                 android:orientation="vertical"
                 android:paddingHorizontal="8dp"
-                android:paddingVertical="5dp">
+                android:paddingVertical="5dp"
+                android:gravity="center_horizontal">
 
                 <TextView
                     android:id="@+id/lap_avg_label"
@@ -172,7 +173,8 @@
                 android:background="@drawable/bg_tile_tonal"
                 android:orientation="vertical"
                 android:paddingHorizontal="8dp"
-                android:paddingVertical="5dp">
+                android:paddingVertical="5dp"
+                android:gravity="center_horizontal">
 
                 <!-- Small heart beside the "HR" label -->
                 <LinearLayout
@@ -223,7 +225,8 @@
                 android:background="@drawable/bg_tile_tonal"
                 android:orientation="vertical"
                 android:paddingHorizontal="8dp"
-                android:paddingVertical="5dp">
+                android:paddingVertical="5dp"
+                android:gravity="center_horizontal">
 
                 <TextView
                     android:id="@+id/cad_label"
