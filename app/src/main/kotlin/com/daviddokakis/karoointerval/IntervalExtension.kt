@@ -185,7 +185,12 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
         val wanted = MutableStateFlow(ErgWanted(null, false, null))
         // Today's intensity: on screen and in ERG (st.target is already scaled); back to 100%
         // when the ride ends, so a weak day doesn't carry over.
-        scope.launch { settings.intensity.collect { workout.setIntensity(it) } }
+        // Only with a trainer in ERG: otherwise targets stay as planned.
+        scope.launch {
+            combine(settings.intensity, settings.enabled, settings.trainer) { pct, on, trainer ->
+                if (on && trainer != null) pct else 100
+            }.collect { workout.setIntensity(it) }
+        }
         scope.launch {
             karoo.consumerFlow<RideState>().map { it is RideState.Idle }.distinctUntilChanged().filter { it }
                 .collect { if (workout.state.value.workoutLoaded || settings.intensity.value != 100) settings.setIntensity(100) }

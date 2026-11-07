@@ -264,7 +264,10 @@ class SetupActivity : AppearanceActivity() {
                         }.apply { (layoutParams as LinearLayout.LayoutParams).topMargin = dp(8) },
                     )
                     addView(rateButton())
-                    addView(intensityRow())
+                    // Today's intensity: only with a trainer in ERG.
+                    ErgSettings.get(this@SetupActivity).let { erg ->
+                        if (erg.enabled.value && erg.trainer.value != null) addView(intensityRow())
+                    }
                 },
             )
         }
