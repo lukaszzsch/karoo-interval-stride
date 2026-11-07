@@ -294,8 +294,11 @@ class SetupActivity : AppearanceActivity() {
             content.addView(text(getString(R.string.none_this_week), 14f, secondary = true))
         }
         val today = LocalDate.now()
+        // Workouts already ridden are hidden unless asked for (the selected one always shows).
+        val doneCount = week.count { it.done && it.plan.id != current?.id }
+        val shown = if (store.hideDone) week.filter { !it.done || it.plan.id == current?.id } else week
         // Today first, then the days still to come, then the days already past.
-        val days = week.groupBy { it.date }.toSortedMap()
+        val days = shown.groupBy { it.date }.toSortedMap()
         val order = days.keys.sortedWith(compareBy({ if (it == today) 0 else if (it > today) 1 else 2 }, { it }))
         order.map { it to days.getValue(it) }.forEach { (date, workouts) ->
             val label = if (date == today) getString(R.string.today_label, date.format(DAY_FORMAT)) else date.format(DAY_FORMAT)
@@ -312,6 +315,18 @@ class SetupActivity : AppearanceActivity() {
                     },
                 )
             }
+        }
+        // "Pokaż zrobione (3)" / "Ukryj zrobione"
+        if (doneCount > 0) {
+            content.addView(
+                button(
+                    if (store.hideDone) getString(R.string.show_done, doneCount) else getString(R.string.hide_done),
+                    primary = false,
+                ) {
+                    store.hideDone = !store.hideDone
+                    render()
+                }.apply { (layoutParams as LinearLayout.LayoutParams).topMargin = dp(12) },
+            )
         }
     }
 

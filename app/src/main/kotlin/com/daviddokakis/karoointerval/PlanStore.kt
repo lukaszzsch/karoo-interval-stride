@@ -23,6 +23,11 @@ class PlanStore private constructor(context: Context) {
     private val _plan = MutableStateFlow(loadSelected())
     val plan: StateFlow<WorkoutPlan?> = _plan
 
+    /** Hide workouts already ridden from the week list (default on). */
+    var hideDone: Boolean
+        get() = prefs.getBoolean("hide_done", true)
+        set(value) = prefs.edit().putBoolean("hide_done", value).apply()
+
     /** FTP typed in on the Account page ("" = work it out from Stride's planned power). */
     var ftp: String
         get() = prefs.getString(KEY_FTP, "") ?: ""

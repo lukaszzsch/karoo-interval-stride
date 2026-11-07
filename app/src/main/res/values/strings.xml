@@ -90,6 +90,8 @@
     <string name="stop_workout">Usuń trening</string>
     <string name="this_week">Ten tydzień</string>
     <string name="need_api_key">Połącz konto Stride, żeby zobaczyć treningi.</string>
+    <string name="show_done">Pokaż zrobione (%1$d)</string>
+    <string name="hide_done">Ukryj zrobione</string>
     <string name="none_this_week">Brak jazd zaplanowanych w Stride na ten tydzień.</string>
     <string name="today_label">Dziś · %1$s</string>
     <string name="selected">Wybrany</string>

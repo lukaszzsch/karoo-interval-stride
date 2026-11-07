@@ -18,6 +18,8 @@ data class PlannedWorkout(
     val load: Int?,
     /** Stored form: `{"activity": …, "workout": …, "ftp": …}`, re-read by [Stride.plannedFrom]. */
     val json: String,
+    /** Already ridden: Stride has a recording for the session (on any device). */
+    val done: Boolean = false,
 )
 
 /**
@@ -204,7 +206,10 @@ class Stride(
             val date = plannedDate(activity) ?: return null
             val load = activity.optDoubleOrNull("planned_training_score")?.roundToInt()
                 ?: stored.optJSONObject("workout")?.optDoubleOrNull("training_score")?.roundToInt()
-            return parseEvent(stored)?.let { PlannedWorkout(it, date, load, stored.toString()) }
+            // Ridden: a start time or duration, or a Garmin recording Stride won't share.
+            val done = activity.optString("started_at").isNotBlank() ||
+                activity.has("duration_seconds") || activity.optBoolean("recording_withheld", false)
+            return parseEvent(stored)?.let { PlannedWorkout(it, date, load, stored.toString(), done) }
         }
 
         /** The workout of a stored session as a [WorkoutPlan]. */
