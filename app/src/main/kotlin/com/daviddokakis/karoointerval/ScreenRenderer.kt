@@ -138,6 +138,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         // While a jump is chosen or counting down, the Target tile shows "174 → 189": the Lap avg
         // tile steps aside so it fits (the gauge layouts show the target in the top row instead).
         lapHiddenForJump = !gaugeMode && s.landStep != null
+        intensityPct = s.intensityPct
         applyTextSizes(v, gaugeMode, karoo)
 
         v.setViewVisibility(R.id.content, View.VISIBLE)
@@ -621,11 +622,11 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     private fun summary(step: PlanStep): String = if (!step.hasTarget) {
         formatDuration(step.durationSec)
     } else if (step.isRange && step.rangeLow != null && step.rangeHigh != null) {
-        context.getString(R.string.step_summary_ramp, formatDuration(step.durationSec), step.rangeLow, step.rangeHigh)
+        context.getString(R.string.step_summary_ramp, formatDuration(step.durationSec), w(step.rangeLow), w(step.rangeHigh))
     } else if (step.isRamp) {
-        context.getString(R.string.step_summary_ramp, formatDuration(step.durationSec), step.startWatts, step.endWatts)
+        context.getString(R.string.step_summary_ramp, formatDuration(step.durationSec), w(step.startWatts), w(step.endWatts))
     } else {
-        context.getString(R.string.step_summary, formatDuration(step.durationSec), step.startWatts)
+        context.getString(R.string.step_summary, formatDuration(step.durationSec), w(step.startWatts))
     }
 
     private fun summaryWithZone(step: PlanStep, ftp: Int?): String {
@@ -669,6 +670,10 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     private var cadText = ""
     private var cadTileShown = false
     private var lapHiddenForJump = false
+    /** Today's intensity: step summaries ("3m @ 180–207W") show the scaled watts too. */
+    private var intensityPct = 100
+
+    private fun w(watts: Int?): Int? = watts?.let { if (intensityPct == 100) it else Math.round(it * intensityPct / 100f) }
 
     private fun applyTextSizes(v: RemoteViews, gaugeMode: Boolean, karoo: Boolean) {
         // Must match the sp sizes in the layouts (the reference size).
