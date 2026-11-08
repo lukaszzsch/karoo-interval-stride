@@ -496,7 +496,9 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         hrText = s.shownHr?.toString() ?: "--"
         cadText = cadence?.toString() ?: "--"
         cadTileShown = freeCadSeen
-        lapHiddenForJump = false
+        // The classic layouts' Target tile has nothing to show without a workout: hidden, so the
+        // tiles are one fewer (the gauge layouts' tiles are Lap avg, HR and Cadence).
+        lapHiddenForJump = !gaugeMode
         intensityPct = 100
         applyTextSizes(v, gaugeMode, karoo)
 
@@ -513,10 +515,11 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         val zoneText = zone?.let { intArrayOf(R.color.zone_text_1, R.color.zone_text_2, R.color.zone_text_3, R.color.zone_text_4, R.color.zone_text_5, R.color.zone_text_6)[it] }
         val wattsColor = if (s.wattsMode.colorsText && zoneText != null) zoneText else R.color.text
         if (gaugeMode) {
-            // No target band without a workout: the gauge's number takes the zone colour.
+            // No target band without a workout: the arc shows the 6 power zones, the zone you're in
+            // drawn wide with the needle in it, and the number takes the zone colour.
             val gaugeW = (config.viewSize.first - 16 * density).toInt()
             if (gaugeW > 0) {
-                v.setImageViewBitmap(R.id.gauge, gauge.render(gaugeW, gaugeHeightPx(karoo, s.navigating), s.power3s, null, null, color(zoneText ?: R.color.text), karoo))
+                v.setImageViewBitmap(R.id.gauge, gauge.renderZones(gaugeW, gaugeHeightPx(karoo, s.navigating), s.power3s, s.powerZones, s.profileFtp, color(zoneText ?: R.color.text), karoo))
             }
         } else {
             v.setTextViewText(R.id.watts, s.power3s?.toString() ?: "--")
@@ -583,9 +586,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             v.setTextViewText(R.id.target_label, context.getString(R.string.last_lap_label))
             v.setTextViewText(R.id.target, lastLap ?: "")
         } else {
-            // The Target tile shows the last lap's average watts.
-            v.setTextViewText(R.id.target_label, context.getString(R.string.last_lap_label))
-            v.setTextViewText(R.id.target, targetText)
+            v.setViewVisibility(R.id.target_tile, View.GONE)
         }
 
         // Bottom: the power chart in the space of the next box (48 dp + 6 dp) and the profile.

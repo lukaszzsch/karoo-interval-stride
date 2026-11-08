@@ -159,6 +159,97 @@ class GaugeRenderer(private val context: Context) {
         return bmp
     }
 
+    /**
+     * Free ride: the arc split into the Karoo's 6 power zones (equal segments, Karoo colours), the
+     * zone you're in drawn full width and the others thinner, a needle at the watts (placed within
+     * its zone's segment) and the watts number under the arc. Without zones or an FTP it falls
+     * back to the plain grey arc.
+     */
+    fun renderZones(
+        width: Int, height: Int, watts: Int?, zones: List<IntRange>, ftp: Int?, numberColor: Int,
+        karooStyle: Boolean = false,
+    ): Bitmap {
+        val bounds = zoneBounds(zones, ftp) ?: return render(width, height, watts, null, null, numberColor, karooStyle)
+        val w = width.coerceAtLeast(1)
+        val h = height.coerceAtLeast(1)
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        val text = watts?.toString() ?: "--"
+        styleNumber(karooStyle)
+        val g = layout(w.toFloat(), h.toFloat(), text)
+
+        val cx = w / 2f
+        val oval = RectF(cx - g.r, g.cy - g.r, cx + g.r, g.cy + g.r)
+        val start = 270f - g.sweep / 2f
+        val n = bounds.size
+        val seg = g.sweep / n
+        val gapDeg = 1.6f
+        val active = watts?.takeIf { it > 0 }?.let { powerZoneIndex(it, zones, ftp) }
+        val arc = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeCap = Paint.Cap.BUTT
+        }
+        val colors = intArrayOf(R.color.pz1, R.color.pz2, R.color.pz3, R.color.pz4, R.color.pz5, R.color.pz6)
+        for (i in 0 until n) {
+            arc.color = color(colors[i.coerceAtMost(colors.size - 1)])
+            // The zone you're in: full width; the others thinner, kept on the arc's centre line.
+            arc.strokeWidth = if (i == active) g.sw else g.sw * 0.5f
+            c.drawArc(oval, start + i * seg + gapDeg / 2f, seg - gapDeg, false, arc)
+        }
+
+        if (watts != null) {
+            // Where the watts sit: their zone's segment, in proportion within the zone.
+            val i = powerZoneIndex(watts.coerceAtLeast(0), zones, ftp).coerceIn(0, n - 1)
+            val z = bounds[i]
+            val inZone = ((watts - z.first).toFloat() / maxOf(1, z.last - z.first)).coerceIn(0f, 1f)
+            val rad = Math.toRadians((start + (i + inZone) * seg).toDouble())
+            val r0 = g.r - g.sw / 2f - w * 0.0125f
+            val r1 = g.r + g.sw / 2f + w * 0.0125f
+            val x0 = cx + r0 * cos(rad).toFloat()
+            val y0 = g.cy + r0 * sin(rad).toFloat()
+            val x1 = cx + r1 * cos(rad).toFloat()
+            val y1 = g.cy + r1 * sin(rad).toFloat()
+            val needle = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeCap = Paint.Cap.ROUND
+            }
+            needle.xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
+            needle.strokeWidth = w * 0.036f
+            c.drawLine(x0, y0, x1, y1, needle)
+            needle.xfermode = null
+            needle.color = color(R.color.text)
+            needle.strokeWidth = w * 0.02f
+            c.drawLine(x0, y0, x1, y1, needle)
+        }
+
+        numberPaint.color = numberColor
+        numberPaint.textSize = g.textSize
+        c.drawText(text, cx, g.baseline, numberPaint)
+        return bmp
+    }
+
+    /**
+     * The 6 zones as watt ranges: the Karoo profile's, else the Karoo's default split of the FTP.
+     * The open top zone gets a span of 30% of its start, so the needle can move within it.
+     */
+    private fun zoneBounds(zones: List<IntRange>, ftp: Int?): List<IntRange>? {
+        val list = when {
+            zones.size >= 2 -> zones.take(6)
+            ftp != null && ftp > 0 -> listOf(0, 56, 76, 91, 106, 121).let { pcts ->
+                pcts.mapIndexed { i, p ->
+                    val lo = ftp * p / 100
+                    val hi = if (i + 1 < pcts.size) ftp * pcts[i + 1] / 100 - 1 else Int.MAX_VALUE
+                    lo..hi
+                }
+            }
+            else -> return null
+        }
+        return list.mapIndexed { i, z ->
+            val open = i == list.size - 1 && (z.last <= z.first || z.last - z.first > z.first)
+            if (open) z.first..(z.first + maxOf(30, z.first * 3 / 10)) else z
+        }
+    }
+
     companion object {
         /** Digit height as a share of the text size (IBM Plex). */
         private const val CAP = 0.71f
