@@ -224,6 +224,54 @@
                     android:textScaleX="0.9"
                     android:textSize="48sp" />
             </FrameLayout>
+
+            <!-- Cadence: shown once a cadence sensor reports -->
+            <FrameLayout
+                android:id="@+id/free_cad_tile"
+                android:visibility="gone"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_tile_tonal"
+                android:paddingHorizontal="6dp"
+                android:paddingTop="6dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:baselineAligned="true"
+                    android:orientation="horizontal">
+
+
+                    <TextView
+                        android:id="@+id/free_cad_label"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="ibm-plex-sans-condensed"
+                        android:gravity="end"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:textAllCaps="true"
+                        android:textColor="@color/text"
+                        android:textSize="15sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/free_cad"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|end"
+                    android:layout_marginBottom="-2dp"
+                    android:fontFamily="sans-serif-light"
+                    android:includeFontPadding="false"
+                    android:letterSpacing="-0.05"
+                    android:maxLines="1"
+                    android:textColor="@color/text"
+                    android:textScaleX="0.9"
+                    android:textSize="48sp" />
+            </FrameLayout>
         </LinearLayout>
 
         <!-- Last lap at the bottom, between the Karoo's own back and next buttons -->

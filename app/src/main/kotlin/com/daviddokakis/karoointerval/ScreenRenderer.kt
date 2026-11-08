@@ -486,12 +486,14 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             if (karoo) {
                 listOf(
                     R.id.free_lap_avg to 48f, R.id.free_hr to 48f, R.id.free_lap_label to 15f, R.id.free_hr_label to 15f,
+                    R.id.free_cad to 48f, R.id.free_cad_label to 15f,
                     R.id.free_lap_time to 23f,
                 )
             } else {
                 listOf(
                     R.id.free_lap_avg to 36f, R.id.free_hr to 36f,
                     R.id.free_lap_label to 13f, R.id.free_hr_label to 13f,
+                    R.id.free_cad to 36f, R.id.free_cad_label to 13f,
                     R.id.free_lap_number to 15f, R.id.free_lap_time to 40f, R.id.free_last_lap to 14f,
                 )
             }
@@ -528,6 +530,13 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             context.getString(if (s.hrShowsLap) R.string.lap_hr else if (karoo) R.string.hr else R.string.heart_rate),
         )
         v.setOnClickPendingIntent(R.id.free_hr_tile, lapHrToggleIntent)
+
+        // Cadence: a third tile once a cadence sensor (or power meter) reports it.
+        val cadence = s.cadence?.takeIf { it > 0 }
+        v.setViewVisibility(R.id.free_cad_tile, if (cadence != null || freeCadSeen) View.VISIBLE else View.GONE)
+        if (cadence != null) freeCadSeen = true
+        v.setTextViewText(R.id.free_cad_label, context.getString(R.string.cadence))
+        v.setTextViewText(R.id.free_cad, cadence?.toString() ?: "--")
 
         // The tile's tint follows the heart rate it shows.
         val zoneBg = when (s.zoneOf(s.shownHr)) {
@@ -702,6 +711,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     private var hrText = ""
     private var cadText = ""
     private var cadTileShown = false
+    /** Cadence reported at least once: the free-ride tile stays (shows -- when it drops to 0). */
+    private var freeCadSeen = false
     private var lapHiddenForJump = false
     /** Today's intensity: step summaries ("3m @ 180–207W") show the scaled watts too. */
     private var intensityPct = 100
