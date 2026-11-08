@@ -138,6 +138,7 @@ class WorkoutSession(
                     it.copy(
                         profileFtp = profile.ftp.takeIf { ftp -> ftp > 0 },
                         hrZones = profile.heartRateZones.map { z -> z.min..z.max },
+                        powerZones = profile.powerZones.map { z -> z.min..z.max },
                     )
                 }
             }
@@ -160,7 +161,7 @@ class WorkoutSession(
         scope.launch { tickLoop() }
         scope.launch { store.karooStyle.collect { on -> _state.update { it.copy(karooStyle = on) } } }
         scope.launch { store.appearance.collect { a -> _state.update { it.copy(appearance = a) } } }
-        _state.update { it.copy(wattsMode = store.wattsMode, targetShowsRange = store.targetShowsRange, lapShowsNp = store.lapShowsNp, hrShowsLap = store.hrShowsLap, clockShowsElapsed = store.clockShowsElapsed) }
+        _state.update { it.copy(wattsMode = store.wattsMode, targetShowsRange = store.targetShowsRange, lapShowsNp = store.lapShowsNp, hrShowsLap = store.hrShowsLap, clockShowsElapsed = store.clockShowsElapsed, freeChartSpan = store.freeChartSpan) }
     }
 
     /** Today's intensity in % (targets and ERG follow it). */
@@ -329,6 +330,15 @@ class WorkoutSession(
             moveCancelledJob?.cancel()
             moveCancelledJob = null
             _state.update { it.copy(moveCancelled = false) }
+        }
+    }
+
+    /** Tap on the free-ride power chart: whole ride → 60 → 20 → 5 min → whole ride. */
+    fun toggleFreeChart() {
+        scope.launch {
+            val span = (_state.value.freeChartSpan + 1) % PowerHistory.SPANS.size
+            store.freeChartSpan = span
+            _state.update { it.copy(freeChartSpan = span) }
         }
     }
 

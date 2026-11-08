@@ -74,6 +74,10 @@ data class ScreenState(
     val lastLapPowerAvg: Int? = null,
     /** Heart rate zones from the Karoo rider profile (min..max bpm), Z1 first. */
     val hrZones: List<IntRange> = emptyList(),
+    /** The rider's power zones from the Karoo profile (7, as on the Karoo). */
+    val powerZones: List<IntRange> = emptyList(),
+    /** Free-ride power chart span: 0 whole ride, 1 last 60 min, 2 last 20 min, 3 last 5 min. */
+    val freeChartSpan: Int = 0,
     /** FTP from the Karoo rider profile, used when the plan has none. */
     val profileFtp: Int? = null,
 ) {

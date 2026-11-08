@@ -24,6 +24,8 @@
     <string name="erg_control">Sterowanie ERG</string>
     <string name="erg_help">Aplikacja ustawia trenażer przez Bluetooth na cel każdego interwału. Na Karoo trenażer zostaw połączony przez ANT+ w trybie Read-Only, żeby Karoo nim nie sterowało.</string>
     <string name="erg_trainer">Trenażer</string>
+    <string name="chart_span_all">Cała jazda</string>
+    <string name="chart_span_min">Ostatnie %1$d min</string>
     <string name="halfway_title">Połowa treningu</string>
     <string name="halfway_detail">Zostało %1$s, czas zawracać</string>
     <string name="erg_alert_connected">ERG połączony</string>

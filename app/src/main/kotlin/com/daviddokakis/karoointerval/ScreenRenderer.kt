@@ -93,6 +93,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     private val lapHrToggleIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_LAP_HR, 14) }
     private val lapNpToggleIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_LAP_NP, 13) }
     private val clockToggleIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_CLOCK, 16) }
+    private val freeChartIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_FREE_CHART, 17) }
     private val wattsColorIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_WATTS_COLOR, 7) }
     private val rateIntent: PendingIntent by lazy {
         PendingIntent.getActivity(
@@ -498,10 +499,15 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
 
         v.setTextViewText(R.id.free_watts, s.power3s?.toString() ?: "--")
 
-        // The ride's power so far at the bottom, coloured by power zone (Karoo profile FTP).
+        // The ride's power at the bottom, coloured by the Karoo's 7 power zones; tap for the span.
         val chartW = (config.viewSize.first - 16 * density).toInt()
         val chartH = (56 * density * scale).toInt().coerceAtLeast(1)
-        val history = if (chartW > 0) powerChart.render(chartW, chartH, s.profileFtp, density) else null
+        val history = if (chartW > 0) {
+            powerChart.render(chartW, chartH, s.powerZones, s.profileFtp, s.freeChartSpan, density * scale)
+        } else {
+            null
+        }
+        v.setOnClickPendingIntent(R.id.free_chart, freeChartIntent)
         if (history != null) {
             v.setViewVisibility(R.id.free_chart, View.VISIBLE)
             v.setImageViewBitmap(R.id.free_chart, history)

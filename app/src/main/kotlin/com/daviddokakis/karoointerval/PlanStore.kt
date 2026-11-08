@@ -56,6 +56,11 @@ class PlanStore private constructor(context: Context) {
         get() = prefs.getBoolean(KEY_HR_LAP, false)
         set(value) = prefs.edit().putBoolean(KEY_HR_LAP, value).apply()
 
+    /** Free-ride power chart span (index into PowerHistory.SPANS, remembered). */
+    var freeChartSpan: Int
+        get() = prefs.getInt("free_chart_span", 0)
+        set(value) = prefs.edit().putInt("free_chart_span", value).apply()
+
     /** The interval clock counts up (time in the interval) instead of down (remembered). */
     var clockShowsElapsed: Boolean
         get() = prefs.getBoolean("clock_elapsed", false)
