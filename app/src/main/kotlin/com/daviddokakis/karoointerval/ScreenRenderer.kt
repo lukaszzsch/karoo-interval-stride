@@ -501,7 +501,11 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
 
         // The ride's power at the bottom, coloured by the Karoo's 6 power zones; tap for the span.
         val chartW = (config.viewSize.first - 16 * density).toInt()
-        val chartH = (56 * density * scale).toInt().coerceAtLeast(1)
+        // Taller than the workout profile: without a workout the big watts number can spare it.
+        val chartH = (FREE_CHART_DP * density * scale).toInt().coerceAtLeast(1)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            v.setViewLayoutHeight(R.id.free_chart, chartH.toFloat(), TypedValue.COMPLEX_UNIT_PX)
+        }
         val history = if (chartW > 0) {
             powerChart.render(chartW, chartH, s.powerZones, s.profileFtp, s.freeChartSpan, density * scale)
         } else {
@@ -776,6 +780,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         private const val REF_W_DP = 255f
         private const val REF_H_DP = 385f
         private const val CHART_DP = 56f
+        /** Free-ride power chart height (the workout profile is [CHART_DP]). */
+        private const val FREE_CHART_DP = 96f
         private const val CELL_VALUE_SP = 28f
         /** Height of the gauge's space on a full page without a route (measured), and how much a route takes. */
         private const val GAUGE_KAROO_DP = 128.7f   // 241 px on a Karoo 3 (162 px with a route)

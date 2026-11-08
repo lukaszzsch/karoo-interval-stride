@@ -74,20 +74,21 @@ class PowerHistoryChart(private val context: Context) {
         R.color.pz1, R.color.pz2, R.color.pz3, R.color.pz4, R.color.pz5, R.color.pz6,
     )
 
-    fun render(width: Int, height: Int, zones: List<IntRange>, ftp: Int?, span: Int, density: Float): Bitmap? {
+    fun render(width: Int, height: Int, zones: List<IntRange>, ftp: Int?, span: Int, density: Float): Bitmap {
         val barW = 3f * density
         val spanSec = PowerHistory.SPANS.getOrNull(span)
         val total = (width / barW).toInt()
         val cols = PowerHistory.columns(total, spanSec)
-        if (cols.isEmpty()) return null
+        // Drawn from the start of the ride (just the span label until power comes in), so the
+        // screen doesn't change its layout once the first watts arrive.
         val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
         val labelH = 12f * density
         val plotH = height - labelH
         // Scale: the highest column, at least 120% of FTP so easy rides don't look maxed out.
-        val top = maxOf(cols.max(), (ftp ?: 0) * 1.2f, 100f)
+        val top = maxOf(cols.maxOrNull() ?: 0f, (ftp ?: 0) * 1.2f, 100f)
         // Whole ride: columns fill the width; a fixed span: each column a fixed width.
-        val w = if (spanSec == null) width.toFloat() / cols.size else width.toFloat() / total
+        val w = if (spanSec == null) width.toFloat() / maxOf(1, cols.size) else width.toFloat() / total
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         cols.forEachIndexed { i, watts ->
             val h = (watts / top * plotH).coerceIn(if (watts > 0) 1f else 0f, plotH)
