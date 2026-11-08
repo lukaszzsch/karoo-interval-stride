@@ -83,12 +83,12 @@
     <color name="countdown_fill">#FF85B7EB</color>
     <color name="countdown_sub">#FF2E5A85</color>
     <!-- Karoo's 6 power zones for the free-ride power chart (as on the Karoo's Power Zones page) -->
-    <color name="pz1">#FF86CFB4</color>
-    <color name="pz2">#FF3E9E8B</color>
-    <color name="pz3">#FFEFD940</color>
-    <color name="pz4">#FFE07A5F</color>
-    <color name="pz5">#FFD0312D</color>
-    <color name="pz6">#FF8E44AD</color>
+    <color name="pz1">#FF88EAB4</color>
+    <color name="pz2">#FF53B68B</color>
+    <color name="pz3">#FFFCF552</color>
+    <color name="pz4">#FFEB906D</color>
+    <color name="pz5">#FFC32A1D</color>
+    <color name="pz6">#FFA8219D</color>
 
     <!-- ERG connection banners -->
     <color name="erg_alert_ok">#FF129A5E</color>
