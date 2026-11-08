@@ -118,7 +118,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         // Debug builds show demo data; in release builds this returns the real state unchanged.
         val s = DemoData.apply(state)
         useAppearance(s.appearance)
-        val plan = s.plan ?: return renderFree(s)
+        if (s.plan == null) return renderFreeRide(s)
         // The Gauge watts mode has its own layout; the other four share the classic one. Each has
         // a "Karoo native styling" twin (setting on the Account page).
         val gaugeMode = s.wattsMode == WattsMode.GAUGE
@@ -468,6 +468,131 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             p > range.last -> RangeState.OVER
             else -> RangeState.IN
         }
+    }
+
+    /**
+     * Free ride (no workout loaded), on the same layout as a workout so the top half doesn't
+     * change: watts (number or gauge, as chosen), "Lap 3" with the lap time where the interval
+     * and its clock are, and the tiles (lap avg / NP, Last lap or HR, cadence once it reports).
+     * The next box and the workout profile make way for the ride's power chart, coloured by the
+     * Karoo's power zones; tap it for the span. The gauge layouts show the last lap up top.
+     */
+    private fun renderFreeRide(s: ScreenState): RemoteViews {
+        val gaugeMode = s.wattsMode == WattsMode.GAUGE
+        val karoo = s.karooStyle
+        val layout = when {
+            gaugeMode && karoo -> R.layout.field_interval_gauge_karoo
+            gaugeMode -> R.layout.field_interval_gauge
+            karoo -> R.layout.field_interval_karoo
+            else -> R.layout.field_interval
+        }
+        val v = RemoteViews(context.packageName, layout)
+        applyAppearance(v, layout)
+        val cadence = s.cadence?.takeIf { it > 0 }
+        if (cadence != null) freeCadSeen = true
+        val lastLapTime = s.lastLapTimeSec?.takeIf { it > 0 }
+        lapText = (if (s.lapShowsNp) s.freeLapNp else s.lapPowerAvg)?.toString() ?: "--"
+        targetText = s.lastLapPowerAvg?.takeIf { lastLapTime != null }?.toString() ?: "--"
+        hrText = s.shownHr?.toString() ?: "--"
+        cadText = cadence?.toString() ?: "--"
+        cadTileShown = freeCadSeen
+        lapHiddenForJump = false
+        intensityPct = 100
+        applyTextSizes(v, gaugeMode, karoo)
+
+        v.setViewVisibility(R.id.content, View.VISIBLE)
+        v.setViewVisibility(R.id.btn_settings, View.VISIBLE)
+        v.setOnClickPendingIntent(R.id.btn_settings, settingsIntent)
+        // Nothing to pause without a workout (the corner keeps its space).
+        v.setViewVisibility(R.id.btn_pause, View.INVISIBLE)
+        v.setViewVisibility(R.id.btn_resume, View.GONE)
+
+        // Watts: no target, so no range colours.
+        if (gaugeMode) {
+            val gaugeW = (config.viewSize.first - 16 * density).toInt()
+            if (gaugeW > 0) {
+                v.setImageViewBitmap(R.id.gauge, gauge.render(gaugeW, gaugeHeightPx(karoo, s.navigating), s.power3s, null, null, color(R.color.text), karoo))
+            }
+        } else {
+            v.setTextViewText(R.id.watts, s.power3s?.toString() ?: "--")
+            v.setTextColor(R.id.watts, color(R.color.text))
+        }
+        v.setInt(R.id.upper, "setBackgroundResource", 0)
+        v.setOnClickPendingIntent(if (gaugeMode) R.id.gauge else R.id.watts, wattsColorIntent)
+        val labelColor = color(if (karoo) R.color.text else R.color.text_secondary)
+        v.setTextColor(R.id.lap_avg_label, labelColor)
+        v.setTextColor(if (gaugeMode) R.id.hr_label else R.id.target_label, labelColor)
+        if (karoo) {
+            val icons = if (gaugeMode) listOf(R.id.icon_timer, R.id.icon_lap, R.id.icon_bolt)
+            else listOf(R.id.icon_timer, R.id.icon_lap, R.id.icon_bolt, R.id.icon_target)
+            icons.forEach { v.setInt(it, "setColorFilter", color(R.color.karoo_green)) }
+        }
+        v.setTextViewText(R.id.hr, s.shownHr?.toString() ?: "--")
+
+        // "Lap 3" and the lap time where the interval and its clock are; "Paused" while paused.
+        if (s.paused) {
+            v.setViewVisibility(R.id.interval_label, View.GONE)
+            v.setViewVisibility(R.id.paused_box, View.VISIBLE)
+            if (karoo) v.setViewVisibility(R.id.icon_timer, View.GONE)
+            if (karoo) v.setViewVisibility(R.id.paused_spacer, View.VISIBLE)
+            v.setTextViewText(R.id.paused_text, context.getString(R.string.paused))
+            blinkOn = !blinkOn
+            v.setInt(R.id.paused_icon, "setImageAlpha", if (blinkOn) 255 else 70)
+        } else {
+            v.setViewVisibility(R.id.interval_label, View.VISIBLE)
+            v.setViewVisibility(R.id.paused_box, View.GONE)
+            if (karoo) v.setViewVisibility(R.id.icon_timer, View.VISIBLE)
+            if (karoo) v.setViewVisibility(R.id.paused_spacer, View.GONE)
+            v.setTextViewText(R.id.interval_label, s.lapNumber?.let { context.getString(R.string.lap_number, it) } ?: "")
+            v.setTextColor(R.id.interval_label, color(if (karoo) R.color.text else R.color.text_secondary))
+        }
+        v.setTextViewText(R.id.time_left, s.lapTimeSec?.let(::formatClock) ?: "--:--")
+        // No interval to fill: the bar keeps its space so the tiles stay where they are.
+        v.setViewVisibility(R.id.interval_progress, View.INVISIBLE)
+
+        // Tiles: lap avg / NP (tap), cadence once it reports.
+        v.setViewVisibility(R.id.tiles_row, View.VISIBLE)
+        v.setViewVisibility(R.id.confirm_row, View.GONE)
+        v.setViewVisibility(R.id.move_cancelled, View.GONE)
+        v.setTextViewText(R.id.lap_avg_label, context.getString(if (s.lapShowsNp) R.string.np else R.string.lap_avg))
+        v.setTextViewText(R.id.lap_avg, lapText)
+        v.setOnClickPendingIntent(R.id.lap_tile, lapNpToggleIntent)
+        v.setViewVisibility(R.id.lap_tile, View.VISIBLE)
+        v.setViewVisibility(R.id.cad_tile, if (cadTileShown) View.VISIBLE else View.GONE)
+        if (cadTileShown) {
+            v.setTextViewText(R.id.cad_label, context.getString(R.string.cadence))
+            v.setTextViewText(R.id.cad_value, cadText)
+            v.setTextColor(R.id.cad_value, color(R.color.text))
+            v.setTextColor(R.id.cad_label, labelColor)
+        }
+        v.setViewVisibility(R.id.target_next, View.GONE)
+        val lastLap = lastLapTime?.let { t -> listOfNotNull(formatClock(t), s.lastLapPowerAvg?.let { "$it W" }).joinToString(" · ") }
+        if (gaugeMode) {
+            // Top row: the last lap ("Ost. okr. 5:00 · 180 W"), hidden until the first lap ends.
+            v.setViewVisibility(R.id.target_block, if (lastLap != null) View.VISIBLE else View.INVISIBLE)
+            v.setTextViewText(R.id.target_label, context.getString(R.string.last_lap_label))
+            v.setTextViewText(R.id.target, lastLap ?: "")
+        } else {
+            // The Target tile shows the last lap's average watts.
+            v.setTextViewText(R.id.target_label, context.getString(R.string.last_lap_label))
+            v.setTextViewText(R.id.target, targetText)
+        }
+
+        // Bottom: the power chart in the space of the next box (48 dp + 6 dp) and the profile.
+        v.setViewVisibility(R.id.next_box, View.GONE)
+        v.setViewVisibility(R.id.countdown_box, View.GONE)
+        v.setViewVisibility(R.id.chart, View.GONE)
+        val chartW = (config.viewSize.first - 16 * density).toInt()
+        val chartH = ((48 + 6) * density + chartHeightPx).toInt().coerceAtLeast(1)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            v.setViewLayoutHeight(R.id.free_chart, chartH.toFloat(), TypedValue.COMPLEX_UNIT_PX)
+        }
+        if (chartW > 0) {
+            v.setImageViewBitmap(R.id.free_chart, powerChart.render(chartW, chartH, s.powerZones, s.profileFtp, s.freeChartSpan, density * scale))
+            v.setViewVisibility(R.id.free_chart, View.VISIBLE)
+        }
+        v.setOnClickPendingIntent(R.id.free_chart, freeChartIntent)
+        return v
     }
 
     /**

@@ -638,6 +638,23 @@
             android:layout_height="54dp"
             android:contentDescription="@string/cd_chart"
             android:scaleType="fitXY" />
+
+
+        <!-- Free ride (no workout): the ride's power by zone, in the space of the next box and profile -->
+
+        <ImageView
+
+            android:id="@+id/free_chart"
+
+            android:layout_width="match_parent"
+
+            android:layout_height="110dp"
+
+            android:scaleType="fitXY"
+
+            android:visibility="gone"
+
+            android:importantForAccessibility="no" />
         </LinearLayout>
 
     </LinearLayout>
