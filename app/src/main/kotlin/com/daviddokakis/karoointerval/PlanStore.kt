@@ -56,6 +56,11 @@ class PlanStore private constructor(context: Context) {
         get() = prefs.getBoolean(KEY_HR_LAP, false)
         set(value) = prefs.edit().putBoolean(KEY_HR_LAP, value).apply()
 
+    /** The interval clock counts up (time in the interval) instead of down (remembered). */
+    var clockShowsElapsed: Boolean
+        get() = prefs.getBoolean("clock_elapsed", false)
+        set(value) = prefs.edit().putBoolean("clock_elapsed", value).apply()
+
     /** Lap tile shows NP instead of the lap average (remembered between rides). */
     var lapShowsNp: Boolean
         get() = prefs.getBoolean(KEY_LAP_NP, false)

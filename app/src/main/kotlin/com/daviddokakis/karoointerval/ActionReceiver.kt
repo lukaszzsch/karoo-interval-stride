@@ -20,6 +20,7 @@ class ActionReceiver : BroadcastReceiver() {
             ACTION_DISMISS_MOVE_CANCELLED -> session.dismissMoveCancelled()
             ACTION_TOGGLE_TARGET -> session.toggleTargetView()
             ACTION_TOGGLE_LAP_NP -> session.toggleLapNp()
+            ACTION_TOGGLE_CLOCK -> session.toggleClock()
             ACTION_TOGGLE_LAP_HR -> session.toggleLapHr()
             ACTION_TOGGLE_WATTS_COLOR -> session.toggleWattsColor()
         }
@@ -37,6 +38,7 @@ class ActionReceiver : BroadcastReceiver() {
         const val ACTION_DISMISS_MOVE_CANCELLED = "com.daviddokakis.karoointerval.DISMISS_MOVE_CANCELLED"
         const val ACTION_TOGGLE_TARGET = "com.daviddokakis.karoointerval.TOGGLE_TARGET"
         const val ACTION_TOGGLE_LAP_NP = "com.daviddokakis.karoointerval.TOGGLE_LAP_NP"
+        const val ACTION_TOGGLE_CLOCK = "com.daviddokakis.karoointerval.TOGGLE_CLOCK"
         const val ACTION_TOGGLE_LAP_HR = "com.daviddokakis.karoointerval.TOGGLE_LAP_HR"
         const val ACTION_TOGGLE_WATTS_COLOR = "com.daviddokakis.karoointerval.TOGGLE_WATTS_COLOR"
     }

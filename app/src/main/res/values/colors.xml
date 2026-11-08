@@ -86,4 +86,5 @@
     <color name="erg_alert_ok">#FF129A5E</color>
     <color name="erg_alert_warn">#FFB3261E</color>
     <color name="erg_alert_text">#FFFFFFFF</color>
+    <color name="halfway_alert">#FF185FA5</color>
 </resources>

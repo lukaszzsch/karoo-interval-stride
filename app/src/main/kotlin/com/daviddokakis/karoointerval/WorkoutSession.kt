@@ -157,7 +157,7 @@ class WorkoutSession(
         scope.launch { tickLoop() }
         scope.launch { store.karooStyle.collect { on -> _state.update { it.copy(karooStyle = on) } } }
         scope.launch { store.appearance.collect { a -> _state.update { it.copy(appearance = a) } } }
-        _state.update { it.copy(wattsMode = store.wattsMode, targetShowsRange = store.targetShowsRange, lapShowsNp = store.lapShowsNp, hrShowsLap = store.hrShowsLap) }
+        _state.update { it.copy(wattsMode = store.wattsMode, targetShowsRange = store.targetShowsRange, lapShowsNp = store.lapShowsNp, hrShowsLap = store.hrShowsLap, clockShowsElapsed = store.clockShowsElapsed) }
     }
 
     /** Today's intensity in % (targets and ERG follow it). */
@@ -326,6 +326,15 @@ class WorkoutSession(
             moveCancelledJob?.cancel()
             moveCancelledJob = null
             _state.update { it.copy(moveCancelled = false) }
+        }
+    }
+
+    /** Tap on the interval clock: time left (−1:35) ↔ time in the interval (3:25). */
+    fun toggleClock() {
+        scope.launch {
+            val up = !_state.value.clockShowsElapsed
+            store.clockShowsElapsed = up
+            _state.update { it.copy(clockShowsElapsed = up) }
         }
     }
 

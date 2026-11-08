@@ -90,6 +90,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     private val targetToggleIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_TARGET, 12) }
     private val lapHrToggleIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_LAP_HR, 14) }
     private val lapNpToggleIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_LAP_NP, 13) }
+    private val clockToggleIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_CLOCK, 16) }
     private val wattsColorIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_WATTS_COLOR, 7) }
     private val rateIntent: PendingIntent by lazy {
         PendingIntent.getActivity(
@@ -253,7 +254,16 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             }
         }
         // Time left in the interval, with a minus so it reads as counting down.
-        v.setTextViewText(R.id.time_left, s.intervalRemainingSec?.let { "\u2212" + formatClock(it) } ?: "--:--")
+        // Tap the clock: time left in the interval (−1:35, default) ↔ time in it so far (3:25).
+        v.setTextViewText(
+            R.id.time_left,
+            if (s.clockShowsElapsed) {
+                s.currentStep?.let { formatClock(s.elapsedInStepSec.coerceAtMost(it.durationSec)) } ?: "--:--"
+            } else {
+                s.intervalRemainingSec?.let { "\u2212" + formatClock(it) } ?: "--:--"
+            },
+        )
+        v.setOnClickPendingIntent(R.id.time_left, clockToggleIntent)
         val total = s.intervalTotalSec ?: 0
         val progress = if (total > 0) (s.elapsedInStepSec * 1000 / total).coerceIn(0, 1000) else 0
         v.setProgressBar(R.id.interval_progress, 1000, progress, false)

@@ -106,6 +106,37 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
                 wasManualPause = manualPause
             }
         }
+        // Halfway through the workout outdoors: "Połowa treningu", to know when to turn back on a
+        // ride without a route. Once per workout and ride; not in indoor profiles.
+        scope.launch {
+            var shownFor: String? = null
+            combine(workout.state, rideState) { st, ride -> st to ride }.collect { (st, ride) ->
+                if (ride is RideState.Idle) {
+                    shownFor = null
+                    return@collect
+                }
+                val plan = st.plan ?: return@collect
+                if (st.finished || shownFor == plan.id || plan.totalSec < MIN_HALFWAY_SEC) return@collect
+                val erg = ErgSettings.get(this@IntervalExtension)
+                val profile = erg.profiles.value.firstOrNull { it.id == erg.activeProfileId.value }
+                if (profile?.indoor == true) return@collect
+                val done = plan.startSecOf(st.stepIndex) + st.elapsedInStepSec
+                if (done * 2 >= plan.totalSec) {
+                    shownFor = plan.id
+                    karoo.dispatch(
+                        InRideAlert(
+                            id = "halfway-${System.currentTimeMillis()}",
+                            icon = R.drawable.ic_interval,
+                            title = getString(R.string.halfway_title),
+                            detail = getString(R.string.halfway_detail, formatClock(plan.totalSec - done)),
+                            autoDismissMs = 10_000L,
+                            backgroundColor = R.color.halfway_alert,
+                            textColor = R.color.erg_alert_text,
+                        ),
+                    )
+                }
+            }
+        }
         // After the ride: put the rating on Stride, retrying until the upload shows up.
         scope.launch {
             ratings.pending.collectLatest { pending -> pending?.let { syncRating(it) } }
@@ -337,6 +368,8 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
         private const val NOTIFICATION_RATE = "ride_rating"
         private const val NOTIFICATION_SYNC = "ride_rating_sync"
         private const val ERG_TICK_MS = 1_000L
+        /** Workouts shorter than this get no halfway banner. */
+        private const val MIN_HALFWAY_SEC = 20 * 60
         private const val ERG_RETRY_MS = 10_000L
         private const val ERG_RESEND_MS = 15_000L
         private const val ERG_WARN_EVERY_MS = 60_000L

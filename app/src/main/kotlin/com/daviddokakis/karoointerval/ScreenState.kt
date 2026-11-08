@@ -27,6 +27,8 @@ data class ScreenState(
     val lapNp: Int? = null,
     /** Lap tile shows NP instead of the lap average (tap to toggle, remembered). */
     val lapShowsNp: Boolean = false,
+    /** Interval clock counts up ("3:25") instead of down ("−1:35"). */
+    val clockShowsElapsed: Boolean = false,
     /** Free ride: the HR tile shows the lap's average heart rate (tap to toggle, remembered). */
     val hrShowsLap: Boolean = false,
     /** Karoo's average heart rate this lap, and in the last lap (free ride). */
