@@ -107,7 +107,8 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
             }
         }
         // Halfway through the workout outdoors: "Połowa treningu", to know when to turn back on a
-        // ride without a route. Once per workout and ride; not in indoor profiles.
+        // ride without a route. Once per workout and ride; not in indoor profiles, nor while the
+        // Karoo navigates a route.
         scope.launch {
             var shownFor: String? = null
             combine(workout.state, rideState) { st, ride -> st to ride }.collect { (st, ride) ->
@@ -120,6 +121,8 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
                 val erg = ErgSettings.get(this@IntervalExtension)
                 val profile = erg.profiles.value.firstOrNull { it.id == erg.activeProfileId.value }
                 if (profile?.indoor == true) return@collect
+                // With a route loaded the Karoo already shows the way back: no banner.
+                if (st.navigating) return@collect
                 val done = plan.startSecOf(st.stepIndex) + st.elapsedInStepSec
                 if (done * 2 >= plan.totalSec) {
                     shownFor = plan.id
