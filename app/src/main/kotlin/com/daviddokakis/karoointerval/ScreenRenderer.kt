@@ -507,19 +507,29 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         v.setViewVisibility(R.id.btn_pause, View.INVISIBLE)
         v.setViewVisibility(R.id.btn_resume, View.GONE)
 
-        // Watts: no target, so no range colours.
+        // Watts in the colour of the Karoo power zone they're in, like the range colours in a
+        // workout: tap cycles plain, coloured number, coloured background, both, and the gauge.
+        val zone = s.power3s?.takeIf { it > 0 && !s.paused }?.let { powerZoneIndex(it, s.powerZones, s.profileFtp) }
+        val zoneText = zone?.let { intArrayOf(R.color.zone_text_1, R.color.zone_text_2, R.color.zone_text_3, R.color.zone_text_4, R.color.zone_text_5, R.color.zone_text_6)[it] }
+        val wattsColor = if (s.wattsMode.colorsText && zoneText != null) zoneText else R.color.text
         if (gaugeMode) {
+            // No target band without a workout: the gauge's number takes the zone colour.
             val gaugeW = (config.viewSize.first - 16 * density).toInt()
             if (gaugeW > 0) {
-                v.setImageViewBitmap(R.id.gauge, gauge.render(gaugeW, gaugeHeightPx(karoo, s.navigating), s.power3s, null, null, color(R.color.text), karoo))
+                v.setImageViewBitmap(R.id.gauge, gauge.render(gaugeW, gaugeHeightPx(karoo, s.navigating), s.power3s, null, null, color(zoneText ?: R.color.text), karoo))
             }
         } else {
             v.setTextViewText(R.id.watts, s.power3s?.toString() ?: "--")
-            v.setTextColor(R.id.watts, color(R.color.text))
+            v.setTextColor(R.id.watts, color(wattsColor))
         }
-        v.setInt(R.id.upper, "setBackgroundResource", 0)
+        val upperBg = if (s.wattsMode.colorsBackground && zone != null) {
+            intArrayOf(R.drawable.bg_zone_1, R.drawable.bg_zone_2, R.drawable.bg_zone_3, R.drawable.bg_zone_4, R.drawable.bg_zone_5, R.drawable.bg_zone_6)[zone]
+        } else {
+            0
+        }
+        if (upperBg != 0) setBg(v, R.id.upper, upperBg) else v.setInt(R.id.upper, "setBackgroundResource", 0)
         v.setOnClickPendingIntent(if (gaugeMode) R.id.gauge else R.id.watts, wattsColorIntent)
-        val labelColor = color(if (karoo) R.color.text else R.color.text_secondary)
+        val labelColor = color(if (upperBg != 0 || karoo) R.color.text else R.color.text_secondary)
         v.setTextColor(R.id.lap_avg_label, labelColor)
         v.setTextColor(if (gaugeMode) R.id.hr_label else R.id.target_label, labelColor)
         if (karoo) {

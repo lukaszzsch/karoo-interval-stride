@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Free ride: watts and the background tint take the colour of the Karoo power zone (light mode). -->
+<resources>
+    <color name="zone_text_1">#FF4B8163</color>
+    <color name="zone_bg_1">#FFBEF3D6</color>
+    <color name="zone_bg_1_clear">#00BEF3D6</color>
+    <color name="zone_text_2">#FF2E644C</color>
+    <color name="zone_bg_2">#FFA0D7BF</color>
+    <color name="zone_bg_2_clear">#00A0D7BF</color>
+    <color name="zone_text_3">#FF8B872D</color>
+    <color name="zone_bg_3">#FFFDFAA0</color>
+    <color name="zone_bg_3_clear">#00FDFAA0</color>
+    <color name="zone_text_4">#FF814F3C</color>
+    <color name="zone_bg_4">#FFF4C2AF</color>
+    <color name="zone_bg_4_clear">#00F4C2AF</color>
+    <color name="zone_text_5">#FF6B1710</color>
+    <color name="zone_bg_5">#FFDE8A83</color>
+    <color name="zone_bg_5_clear">#00DE8A83</color>
+    <color name="zone_text_6">#FF5C1256</color>
+    <color name="zone_bg_6">#FFCF85C9</color>
+    <color name="zone_bg_6_clear">#00CF85C9</color>
+</resources>

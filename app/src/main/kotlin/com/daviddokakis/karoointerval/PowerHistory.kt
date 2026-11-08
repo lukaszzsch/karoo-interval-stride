@@ -107,15 +107,19 @@ class PowerHistoryChart(private val context: Context) {
         return bmp
     }
 
-    /** 0..5: the zone [watts] falls in. */
-    private fun zoneIndex(watts: Int, zones: List<IntRange>, ftp: Int?): Int {
+    private fun zoneIndex(watts: Int, zones: List<IntRange>, ftp: Int?): Int = powerZoneIndex(watts, zones, ftp)
+}
+
+/** 0..5: the Karoo power zone [watts] falls in (profile zones, else the default % of FTP). */
+fun powerZoneIndex(watts: Int, zones: List<IntRange>, ftp: Int?): Int {
+    run {
         if (zones.size >= 2) {
             val i = zones.indexOfFirst { watts in it }
             return when {
                 i >= 0 -> i
                 watts > zones.last().last -> zones.size - 1
                 else -> 0
-            }.coerceIn(0, zoneColors.size - 1)
+            }.coerceIn(0, 5)
         }
         if (ftp == null || ftp <= 0) return 0
         val pct = watts * 100 / ftp
