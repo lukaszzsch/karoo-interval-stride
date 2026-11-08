@@ -180,6 +180,16 @@
             android:paddingBottom="4dp"
             android:textColor="@color/text_secondary"
             android:textSize="14sp" />
+
+        <!-- The ride's power so far, coloured by power zone (hidden until there is some) -->
+        <ImageView
+            android:id="@+id/free_chart"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="4dp"
+            android:scaleType="fitXY"
+            android:visibility="gone"
+            android:importantForAccessibility="no" />
     </LinearLayout>
 
     <!-- Workouts (gear), top left. No pause: without a workout there's no interval timer. -->

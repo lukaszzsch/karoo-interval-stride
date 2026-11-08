@@ -119,7 +119,10 @@ class WorkoutSession(
                 _state.update { it.copy(paused = ride is RideState.Paused) }
                 // No ride (not started, finished or discarded): start the workout from the top
                 // next time. Progress is only kept while a ride is recording or paused.
-                if (ride is RideState.Idle) resetToStart()
+                if (ride is RideState.Idle) {
+                    resetToStart()
+                    PowerHistory.clear()
+                }
             }
         }
         // Navigating (a route or a destination): the Karoo shows its route pill and makes the field
@@ -513,7 +516,10 @@ class WorkoutSession(
             lapSamples++
             lapNp.add(SystemClock.elapsedRealtime(), watts)
         }
-        if (watts != null && recording) freeLapNp.add(SystemClock.elapsedRealtime(), watts)
+        if (watts != null && recording) {
+            freeLapNp.add(SystemClock.elapsedRealtime(), watts)
+            PowerHistory.add(watts) // the free-ride power chart
+        }
         _state.update {
             it.copy(
                 power = watts?.roundToInt(),

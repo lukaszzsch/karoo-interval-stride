@@ -23,6 +23,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     private var res: Context = context
     private var resFor: Appearance = Appearance.AUTO
     private var chart = ChartRenderer(context)
+    private var powerChart = PowerHistoryChart(context)
     private var gauge = GaugeRenderer(context)
 
     private fun useAppearance(a: Appearance) {
@@ -30,6 +31,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         resFor = a
         res = a.apply(context)
         chart = ChartRenderer(res)
+        powerChart = PowerHistoryChart(res)
         gauge = GaugeRenderer(res)
     }
 
@@ -495,6 +497,17 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         ).forEach { (id, sp) -> v.setTextViewTextSize(id, TypedValue.COMPLEX_UNIT_PX, sp * density * scale) }
 
         v.setTextViewText(R.id.free_watts, s.power3s?.toString() ?: "--")
+
+        // The ride's power so far at the bottom, coloured by power zone (Karoo profile FTP).
+        val chartW = (config.viewSize.first - 16 * density).toInt()
+        val chartH = (56 * density * scale).toInt().coerceAtLeast(1)
+        val history = if (chartW > 0) powerChart.render(chartW, chartH, s.profileFtp, density) else null
+        if (history != null) {
+            v.setViewVisibility(R.id.free_chart, View.VISIBLE)
+            v.setImageViewBitmap(R.id.free_chart, history)
+        } else {
+            v.setViewVisibility(R.id.free_chart, View.GONE)
+        }
         v.setTextViewText(R.id.free_lap_label, context.getString(if (s.lapShowsNp) R.string.np else R.string.lap_avg))
         v.setTextViewText(R.id.free_lap_avg, (if (s.lapShowsNp) s.freeLapNp else s.lapPowerAvg)?.toString() ?: "--")
         v.setOnClickPendingIntent(R.id.free_lap_tile, lapNpToggleIntent)
