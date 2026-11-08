@@ -82,14 +82,13 @@
     <!-- Countdown (regular style): the darker blue it fills with, and "Jumping to" on the pale blue -->
     <color name="countdown_fill">#FF85B7EB</color>
     <color name="countdown_sub">#FF2E5A85</color>
-    <!-- Power zones Z1–Z7 for the free-ride power chart (grey, blue, green, yellow, orange, red, purple) -->
-    <color name="pz1">#FF9E9E9E</color>
-    <color name="pz2">#FF2F80ED</color>
-    <color name="pz3">#FF27AE60</color>
-    <color name="pz4">#FFF2C94C</color>
-    <color name="pz5">#FFF2994A</color>
-    <color name="pz6">#FFEB5757</color>
-    <color name="pz7">#FF9B51E0</color>
+    <!-- Karoo's 6 power zones for the free-ride power chart (as on the Karoo's Power Zones page) -->
+    <color name="pz1">#FF86CFB4</color>
+    <color name="pz2">#FF3E9E8B</color>
+    <color name="pz3">#FFEFD940</color>
+    <color name="pz4">#FFE07A5F</color>
+    <color name="pz5">#FFD0312D</color>
+    <color name="pz6">#FF8E44AD</color>
 
     <!-- ERG connection banners -->
     <color name="erg_alert_ok">#FF129A5E</color>

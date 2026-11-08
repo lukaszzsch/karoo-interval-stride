@@ -64,13 +64,14 @@ object PowerHistory {
 }
 
 /**
- * Draws [PowerHistory] as bars coloured by power zone: the Karoo profile's 7 zones, or Coggan's
- * (55 / 75 / 90 / 105 / 120 / 150 % of FTP) when the profile has none. The span shows top left.
+ * Draws [PowerHistory] as bars coloured by power zone: the Karoo profile's 6 zones in the Karoo's
+ * colours, or the Karoo's default split (55 / 75 / 90 / 105 / 120 % of FTP) when the profile has
+ * none. The span shows top left.
  */
 class PowerHistoryChart(private val context: Context) {
 
     private val zoneColors = intArrayOf(
-        R.color.pz1, R.color.pz2, R.color.pz3, R.color.pz4, R.color.pz5, R.color.pz6, R.color.pz7,
+        R.color.pz1, R.color.pz2, R.color.pz3, R.color.pz4, R.color.pz5, R.color.pz6,
     )
 
     fun render(width: Int, height: Int, zones: List<IntRange>, ftp: Int?, span: Int, density: Float): Bitmap? {
@@ -105,7 +106,7 @@ class PowerHistoryChart(private val context: Context) {
         return bmp
     }
 
-    /** 0..6: the zone [watts] falls in. */
+    /** 0..5: the zone [watts] falls in. */
     private fun zoneIndex(watts: Int, zones: List<IntRange>, ftp: Int?): Int {
         if (zones.size >= 2) {
             val i = zones.indexOfFirst { watts in it }
@@ -123,8 +124,7 @@ class PowerHistoryChart(private val context: Context) {
             pct <= 90 -> 2
             pct <= 105 -> 3
             pct <= 120 -> 4
-            pct <= 150 -> 5
-            else -> 6
+            else -> 5
         }
     }
 }

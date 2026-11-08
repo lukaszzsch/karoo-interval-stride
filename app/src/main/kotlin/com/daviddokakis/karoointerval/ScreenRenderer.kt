@@ -499,7 +499,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
 
         v.setTextViewText(R.id.free_watts, s.power3s?.toString() ?: "--")
 
-        // The ride's power at the bottom, coloured by the Karoo's 7 power zones; tap for the span.
+        // The ride's power at the bottom, coloured by the Karoo's 6 power zones; tap for the span.
         val chartW = (config.viewSize.first - 16 * density).toInt()
         val chartH = (56 * density * scale).toInt().coerceAtLeast(1)
         val history = if (chartW > 0) {
