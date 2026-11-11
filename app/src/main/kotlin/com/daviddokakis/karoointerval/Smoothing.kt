@@ -23,4 +23,15 @@ enum class TopRow(val label: Int) {
 }
 
 /** Totals of a finished workout, for the "Workout complete" summary. */
-data class WorkoutSummary(val timeSec: Int, val avgPower: Int?, val np: Int?, val avgHr: Int?)
+data class WorkoutSummary(
+    val timeSec: Int,
+    val avgPower: Int?,
+    val np: Int?,
+    val avgHr: Int?,
+    /**
+     * Heart rate drift (aerobic decoupling, Pw:HR) in %: how much the watts per heartbeat fell
+     * from the first half of the workout to the second. Null for workouts under 20 minutes or
+     * without power and heart rate.
+     */
+    val driftPct: Double? = null,
+)

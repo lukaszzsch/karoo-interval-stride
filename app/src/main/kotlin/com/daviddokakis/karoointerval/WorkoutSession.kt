@@ -572,6 +572,7 @@ class WorkoutSession(
     private var hrSum = 0.0
     private var hrSamples = 0
     private val workoutNp = LapNp()
+    private val driftSamples = ArrayList<Pair<Float, Float>>()
 
     private fun resetTotals() {
         workoutMs = 0
@@ -580,6 +581,24 @@ class WorkoutSession(
         hrSum = 0.0
         hrSamples = 0
         workoutNp.reset()
+        driftSamples.clear()
+    }
+
+    /**
+     * Pw:HR decoupling: (watts per beat in the first half − in the second half) ÷ the first
+     * half's, in %. Positive: the heart worked harder for the same power later on.
+     */
+    private fun driftPct(): Double? {
+        if (driftSamples.size < MIN_DRIFT_SAMPLES) return null
+        val half = driftSamples.size / 2
+        fun ratio(part: List<Pair<Float, Float>>): Double? {
+            val p = part.sumOf { it.first.toDouble() } / part.size
+            val hr = part.sumOf { it.second.toDouble() } / part.size
+            return if (p > 0 && hr > 0) p / hr else null
+        }
+        val first = ratio(driftSamples.subList(0, half)) ?: return null
+        val second = ratio(driftSamples.subList(half, driftSamples.size)) ?: return null
+        return (first - second) / first * 100.0
     }
 
     private fun summaryNow() = WorkoutSummary(
@@ -587,6 +606,7 @@ class WorkoutSession(
         avgPower = if (powerSamples > 0) (powerSum / powerSamples).roundToInt() else null,
         np = workoutNp.value,
         avgHr = if (hrSamples > 0) (hrSum / hrSamples).roundToInt() else null,
+        driftPct = driftPct(),
     )
 
     private fun goToStep(index: Int, natural: Boolean) {
@@ -632,6 +652,8 @@ class WorkoutSession(
         val st = _state.value
         // The lap average keeps counting while the workout is paused; only the interval timer stops.
         if (watts != null && workoutRunning()) {
+            // Power with the heart rate of the moment, for the heart rate drift at the end.
+            st.heartRate?.takeIf { it > 0 }?.let { hr -> driftSamples.add(watts.toFloat() to hr.toFloat()) }
             powerSum += watts
             powerSamples++
             workoutNp.add(SystemClock.elapsedRealtime(), watts)
@@ -673,6 +695,8 @@ class WorkoutSession(
 
     companion object {
         const val COUNTDOWN_SECONDS = 5
+        /** Heart rate drift needs at least 20 minutes of power with heart rate (about 1 a second). */
+        private const val MIN_DRIFT_SAMPLES = 20 * 60
         /** A choice made with a remote button confirms itself after this many seconds. */
         const val AUTO_CONFIRM_SECONDS = 5
         /** An unconfirmed jump choice cancels itself after this long. */

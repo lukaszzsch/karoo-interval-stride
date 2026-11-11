@@ -399,7 +399,20 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
                         (listOf(context.getString(R.string.summary_label)) + listOfNotNull(sm.np?.let { "NP $it" }, sm.avgHr?.let { context.getString(R.string.bpm_value, it) })).joinToString(SEP),
                     )
                     v.setViewVisibility(R.id.next_label, View.VISIBLE)
-                    v.setTextViewText(R.id.next_value, listOfNotNull(formatClock(sm.timeSec), sm.avgPower?.let { "$it W" }).joinToString(SEP))
+                    // Heart rate drift: green under 5 % (the aerobic base held), orange above.
+                    val drift = sm.driftPct?.let { context.getString(R.string.drift_value, String.format(java.util.Locale.forLanguageTag("pl"), "%.1f", it)) }
+                    val line = listOfNotNull(formatClock(sm.timeSec), sm.avgPower?.let { "$it W" }, drift).joinToString(SEP)
+                    v.setTextViewText(
+                        R.id.next_value,
+                        if (drift == null) {
+                            line
+                        } else {
+                            android.text.SpannableString(line).apply {
+                                val c = color(if (sm.driftPct!! < 5.0) R.color.watts_in_range else R.color.watts_over)
+                                setSpan(android.text.style.ForegroundColorSpan(c), line.length - drift.length, line.length, 0)
+                            }
+                        },
+                    )
                     v.setTextColor(R.id.next_value, color(R.color.text))
                 }
                 choosing != null -> {
