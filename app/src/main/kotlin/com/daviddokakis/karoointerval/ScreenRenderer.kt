@@ -385,7 +385,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
                     // "First up" or, after ⏮ / ⏭, "Start at 3 / 16": the interval it starts with.
                     v.setTextViewText(
                         R.id.next_label,
-                        if (s.stepIndex == 0) context.getString(R.string.first_up) else context.getString(R.string.start_at, s.stepIndex + 1, s.stepCount),
+                        if (s.stepIndex == 0) context.getString(R.string.first_up, s.stepCount) else context.getString(R.string.start_at, s.stepIndex + 1, s.stepCount),
                     )
                     v.setViewVisibility(R.id.next_label, View.VISIBLE)
                     v.setTextViewText(R.id.next_value, s.currentStep?.let { summary(it) } ?: "")

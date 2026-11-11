@@ -50,7 +50,7 @@
     <string name="top_target">Cel</string>
     <string name="tap_to_start">Dotknij ▶, by zacząć</string>
     <string name="start_countdown">Start za %1$d · ▶ anuluje</string>
-    <string name="first_up">Pierwszy · ⏮ ⏭ zmienia start</string>
+    <string name="first_up">Start od 1 / %1$d</string>
     <string name="start_at">Start od %1$d / %2$d</string>
     <string name="summary_label">Podsumowanie</string>
     <string name="drift_value">dryf %1$s%%</string>
