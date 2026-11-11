@@ -52,6 +52,7 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
         workout.start()
         startRating()
         startErg()
+        startUpdateCheck()
 
         // Refresh this week's list in the background so it's ready when the rider picks a workout.
         if (store.hasCredentials) {
@@ -326,6 +327,56 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
         }
     }
 
+    /**
+     * Update notices: once a day, never during a ride, asks GitHub for the latest release
+     * (build-N) and, when it's newer than this app (versionCode 100 + N), puts a card in the
+     * Karoo's notifications, once per build.
+     */
+    private fun startUpdateCheck() {
+        scope.launch {
+            val ride = karoo.consumerFlow<RideState>()
+            var idle = true
+            launch { ride.collect { idle = it is RideState.Idle } }
+            delay(UPDATE_FIRST_DELAY_MS)
+            while (true) {
+                val now = System.currentTimeMillis()
+                if (store.updateNotices && idle && now - store.lastUpdateCheck >= UPDATE_EVERY_MS) {
+                    runCatching { checkForUpdate() }.onFailure { Timber.w(it, "Update check failed") }
+                }
+                delay(UPDATE_TICK_MS)
+            }
+        }
+    }
+
+    private suspend fun checkForUpdate() {
+        val result = karoo.karooHttp(
+            "GET",
+            "https://api.github.com/repos/lukaszzsch/karoo-interval-stride/releases/latest",
+            mapOf("Accept" to "application/vnd.github+json", "User-Agent" to "karoo-interval-stride"),
+            waitForConnection = false,
+        )
+        if (result.statusCode !in 200..299) return
+        store.lastUpdateCheck = System.currentTimeMillis()
+        val tag = org.json.JSONObject(result.body).optString("tag_name")
+        val latest = tag.removePrefix("build-").toIntOrNull() ?: return
+        val info = packageManager.getPackageInfo(packageName, 0)
+        @Suppress("DEPRECATION")
+        val code = if (android.os.Build.VERSION.SDK_INT >= 28) info.longVersionCode.toInt() else info.versionCode
+        val current = code - 100
+        Timber.i("Update check: latest build $latest, installed $current")
+        if (latest > current && latest > store.announcedBuild) {
+            store.announcedBuild = latest
+            karoo.dispatch(
+                SystemNotification(
+                    id = "update-$latest",
+                    header = getString(R.string.update_title),
+                    message = getString(R.string.update_message, tag),
+                    style = SystemNotification.Style.UPDATE,
+                ),
+            )
+        }
+    }
+
     /** A 5-second banner over the ride screens about the trainer connection. */
     private fun ergAlert(title: String, detail: String, ok: Boolean) {
         karoo.dispatch(
@@ -371,6 +422,9 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
         private const val NOTIFICATION_RATE = "ride_rating"
         private const val NOTIFICATION_SYNC = "ride_rating_sync"
         private const val ERG_TICK_MS = 1_000L
+        private const val UPDATE_FIRST_DELAY_MS = 60_000L
+        private const val UPDATE_TICK_MS = 30 * 60_000L
+        private const val UPDATE_EVERY_MS = 24 * 60 * 60_000L
         /** Workouts shorter than this get no halfway banner. */
         private const val MIN_HALFWAY_SEC = 20 * 60
         private const val ERG_RETRY_MS = 10_000L

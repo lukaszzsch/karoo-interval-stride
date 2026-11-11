@@ -497,6 +497,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         v.setOnClickPendingIntent(R.id.move_cancelled, dismissCancelledIntent)
 
         applyTopRow(v, s, top, gaugeMode, karoo, free = false)
+        applyTileStyle(v, s, gaugeMode)
 
         // Chart
         val chartW = (config.viewSize.first - 16 * density).toInt()
@@ -566,6 +567,13 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             v.setTextViewText(R.id.hr_label, context.getString(R.string.target))
             v.setTextViewText(R.id.hr, gaugeTargetText(s))
         }
+    }
+
+    /** Settings › Tiles: outline instead of the grey fill (Lap avg, Target or HR, Cadence). */
+    private fun applyTileStyle(v: RemoteViews, s: ScreenState, gaugeMode: Boolean) {
+        if (!s.tileOutline) return
+        val tiles = listOf(R.id.lap_tile, R.id.cad_tile, if (gaugeMode) R.id.hr_tile else R.id.target_tile)
+        tiles.forEach { setBg(v, it, R.drawable.bg_outline) }
     }
 
     private enum class RangeState { UNDER, IN, OVER }
@@ -740,6 +748,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         }
 
         applyTopRow(v, s, top, gaugeMode, karoo, free = true)
+        applyTileStyle(v, s, gaugeMode)
 
         // Bottom: the power chart in the space of the next box (48 dp + 6 dp) and the profile.
         v.setViewVisibility(R.id.next_box, View.GONE)

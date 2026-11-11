@@ -90,6 +90,8 @@ data class ScreenState(
     val rideAvgHr: Int? = null,
     /** What the top row shows. */
     val topRow: TopRow = TopRow.AUTO,
+    /** Tiles as an outline instead of a grey fill. */
+    val tileOutline: Boolean = false,
     /** FTP from the Karoo rider profile, used when the plan has none. */
     val profileFtp: Int? = null,
 ) {

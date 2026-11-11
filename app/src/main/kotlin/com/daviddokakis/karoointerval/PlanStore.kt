@@ -108,6 +108,40 @@ class PlanStore private constructor(context: Context) {
         _powerSmoothing.value = value
     }
 
+    private val _cadenceSmoothing = MutableStateFlow(
+        Smoothing.entries.firstOrNull { it.name == prefs.getString("cadence_smoothing", null) } ?: Smoothing.INSTANT,
+    )
+    /** How cadence is smoothed (instant like the Karoo's own Cadence field, or 3 / 5 / 10 s). */
+    val cadenceSmoothing: StateFlow<Smoothing> = _cadenceSmoothing
+
+    fun setCadenceSmoothing(value: Smoothing) {
+        prefs.edit().putString("cadence_smoothing", value.name).apply()
+        _cadenceSmoothing.value = value
+    }
+
+    private val _tileOutline = MutableStateFlow(prefs.getBoolean("tile_outline", false))
+    /** Tiles drawn as an outline instead of a grey fill. */
+    val tileOutline: StateFlow<Boolean> = _tileOutline
+
+    fun setTileOutline(on: Boolean) {
+        prefs.edit().putBoolean("tile_outline", on).apply()
+        _tileOutline.value = on
+    }
+
+    /** A card in the Karoo's notifications when a new build is out (checked once a day). */
+    var updateNotices: Boolean
+        get() = prefs.getBoolean("update_notices", true)
+        set(value) = prefs.edit().putBoolean("update_notices", value).apply()
+
+    var lastUpdateCheck: Long
+        get() = prefs.getLong("last_update_check", 0L)
+        set(value) = prefs.edit().putLong("last_update_check", value).apply()
+
+    /** The newest build already announced, so each one is announced once. */
+    var announcedBuild: Int
+        get() = prefs.getInt("announced_build", 0)
+        set(value) = prefs.edit().putInt("announced_build", value).apply()
+
     private val _topRow = MutableStateFlow(
         TopRow.entries.firstOrNull { it.name == prefs.getString("top_row", null) } ?: TopRow.AUTO,
     )

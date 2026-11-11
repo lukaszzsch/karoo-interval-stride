@@ -80,6 +80,39 @@ class SettingsActivity : AppearanceActivity() {
         form.addView(settingsHelp(getString(R.string.power_smoothing_help)))
         form.addView(settingsDivider())
 
+        // Cadence smoothing: Instant / 3 s / 5 s / 10 s
+        form.addView(settingsHeading(R.drawable.ic_bolt_filled, getString(R.string.cadence_smoothing)))
+        form.addView(
+            segmented(Smoothing.entries.map { it.label to it }, store.cadenceSmoothing.value) { picked ->
+                store.setCadenceSmoothing(picked)
+                render()
+            },
+        )
+        form.addView(settingsHelp(getString(R.string.cadence_smoothing_help)))
+        form.addView(settingsDivider())
+
+        // Tiles: Tonal / Outline
+        form.addView(settingsHeading(R.drawable.ic_style, getString(R.string.tiles_style)))
+        form.addView(
+            segmented(listOf(R.string.tiles_tonal to false, R.string.tiles_outline to true), store.tileOutline.value) { on ->
+                store.setTileOutline(on)
+                render()
+            },
+        )
+        form.addView(settingsHelp(getString(R.string.tiles_style_help)))
+        form.addView(settingsDivider())
+
+        // Update notices: Off / On
+        form.addView(settingsHeading(R.drawable.ic_interval, getString(R.string.update_notices)))
+        form.addView(
+            segmented(listOf(R.string.off to false, R.string.on to true), store.updateNotices) { on ->
+                store.updateNotices = on
+                render()
+            },
+        )
+        form.addView(settingsHelp(getString(R.string.update_notices_help)))
+        form.addView(settingsDivider())
+
         // Top row: Auto / Heart rate / Cadence / Target
         form.addView(settingsHeading(R.drawable.ic_heart, getString(R.string.top_row)))
         form.addView(

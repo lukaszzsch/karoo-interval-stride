@@ -32,6 +32,16 @@
     <string name="smoothing_3s">3 s</string>
     <string name="smoothing_5s">5 s</string>
     <string name="smoothing_10s">10 s</string>
+    <string name="cadence_smoothing">Kadencja</string>
+    <string name="cadence_smoothing_help">Jak wygładzana jest kadencja. Chwilowa jak w polu Cadence Karoo; 3, 5 i 10 s są spokojniejsze.</string>
+    <string name="tiles_style">Kafelki</string>
+    <string name="tiles_tonal">Tło</string>
+    <string name="tiles_outline">Obramowanie</string>
+    <string name="tiles_style_help">Kafelki Śr. okr., Cel, HR i Kadencja: z szarym tłem albo tylko z cienką ramką, jak pole Dalej.</string>
+    <string name="update_notices">Nowa wersja</string>
+    <string name="update_notices_help">Raz dziennie, nigdy w trakcie jazdy, aplikacja sprawdza na GitHubie, czy jest nowa wersja, i daje znać w powiadomieniach Karoo.</string>
+    <string name="update_title">Nowa wersja Interval Screen Stride</string>
+    <string name="update_message">%1$s jest na GitHubie. Zainstaluj przez Hammerhead Companion.</string>
     <string name="top_row">Górny rząd</string>
     <string name="top_row_help">Co pokazuje górny rząd ekranu. Auto: tętno nad liczbą watów, cel nad wskaźnikiem. To, co trafi na górę, zwalnia swój kafelek: z celem na górze kafelek Cel pokazuje tętno, z tętnem lub kadencją nad wskaźnikiem kafelek HR pokazuje cel.</string>
     <string name="top_auto">Auto</string>

@@ -2,12 +2,12 @@ package com.daviddokakis.karoointerval
 
 import io.hammerhead.karooext.models.DataType
 
-/** How the big watts are smoothed: Karoo's instant, 3 s, 5 s or 10 s average power. */
-enum class Smoothing(val label: Int, val power: String) {
-    INSTANT(R.string.smoothing_instant, DataType.Type.POWER),
-    S3(R.string.smoothing_3s, DataType.Type.SMOOTHED_3S_AVERAGE_POWER),
-    S5(R.string.smoothing_5s, DataType.Type.SMOOTHED_5S_AVERAGE_POWER),
-    S10(R.string.smoothing_10s, DataType.Type.SMOOTHED_10S_AVERAGE_POWER),
+/** How the big watts (and cadence) are smoothed: Karoo's instant, 3 s, 5 s or 10 s average. */
+enum class Smoothing(val label: Int, val power: String, val cadence: String) {
+    INSTANT(R.string.smoothing_instant, DataType.Type.POWER, DataType.Type.CADENCE),
+    S3(R.string.smoothing_3s, DataType.Type.SMOOTHED_3S_AVERAGE_POWER, DataType.Type.SMOOTHED_3S_AVERAGE_CADENCE),
+    S5(R.string.smoothing_5s, DataType.Type.SMOOTHED_5S_AVERAGE_POWER, DataType.Type.SMOOTHED_5S_AVERAGE_CADENCE),
+    S10(R.string.smoothing_10s, DataType.Type.SMOOTHED_10S_AVERAGE_POWER, DataType.Type.SMOOTHED_10S_AVERAGE_CADENCE),
 }
 
 /**
