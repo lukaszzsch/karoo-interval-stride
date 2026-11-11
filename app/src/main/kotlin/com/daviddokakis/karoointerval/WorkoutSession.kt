@@ -5,6 +5,7 @@ import io.hammerhead.karooext.KarooSystemService
 import io.hammerhead.karooext.models.DataType
 import io.hammerhead.karooext.models.MarkLap
 import io.hammerhead.karooext.models.OnNavigationState
+import io.hammerhead.karooext.models.PerformHardwareAction
 import io.hammerhead.karooext.models.PlayBeepPattern
 import io.hammerhead.karooext.models.RideState
 import io.hammerhead.karooext.models.UserProfile
@@ -134,9 +135,20 @@ class WorkoutSession(
             }
         }
         scope.launch {
+            // null until the first state: an app started mid-ride doesn't take that for a fresh start.
+            var wasIdle: Boolean? = null
             karoo.consumerFlow<RideState>().collect { ride ->
                 recording = ride is RideState.Recording
-                _state.update { it.copy(paused = ride is RideState.Paused) }
+                _state.update { it.copy(paused = ride is RideState.Paused, rideIdle = ride is RideState.Idle) }
+                // On a trainer profile the Karoo's start button starts the workout too: a ride that
+                // starts with a workout waiting for START begins it (the usual 5 s countdown). Not
+                // when ▶ already did (its countdown runs), nor for a workout picked mid-ride.
+                val st = _state.value
+                if (wasIdle == true && recording && st.indoor && st.plan != null && st.waiting && countdownJob?.isActive != true) {
+                    Timber.i("Ride started on a trainer profile: the workout starts with it")
+                    startCountdown(st.stepIndex)
+                }
+                wasIdle = ride is RideState.Idle
                 // No ride (not started, finished or discarded): start the workout from the top
                 // next time. Progress is only kept while a ride is recording or paused.
                 if (ride is RideState.Idle) {
@@ -200,6 +212,21 @@ class WorkoutSession(
     /** Whether the trainer is in ERG at the target (shown as "Cel · ERG"). */
     fun setErgActive(active: Boolean) {
         if (_state.value.ergActive != active) _state.update { it.copy(ergActive = active) }
+    }
+
+    /** The trainer is connected for ERG ("ERG gotowy" before START). */
+    fun setErgConnected(up: Boolean) {
+        if (_state.value.ergConnected != up) _state.update { it.copy(ergConnected = up) }
+    }
+
+    /** The active profile is a trainer profile: the Karoo's start button starts the workout too. */
+    fun setIndoor(indoor: Boolean) {
+        if (_state.value.indoor != indoor) _state.update { it.copy(indoor = indoor) }
+    }
+
+    /** The trainer sends the Karoo's power on a profile without ERG (start-screen hint). */
+    fun setTrainerOutdoor(on: Boolean) {
+        if (_state.value.trainerOutdoor != on) _state.update { it.copy(trainerOutdoor = on) }
     }
 
     /** The ride's rating, shown with "Workout complete". */
@@ -468,6 +495,13 @@ class WorkoutSession(
                     cancelCountdown()
                     beep(CANCEL_TONE)
                 } else {
+                    // On a trainer profile with no ride yet, ▶ also starts the Karoo's ride, as its
+                    // start button would (only with no ride at all: on a recording or paused ride
+                    // that button would pause or resume it instead).
+                    if (_state.value.indoor && _state.value.rideIdle) {
+                        Timber.i("Starting the Karoo ride with the workout")
+                        karoo.dispatch(PerformHardwareAction.BottomRightPress)
+                    }
                     startCountdown(_state.value.stepIndex)
                 }
                 return@launch

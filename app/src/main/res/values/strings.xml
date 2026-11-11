@@ -24,6 +24,17 @@
     <string name="erg_control">Sterowanie ERG</string>
     <string name="erg_help">Aplikacja ustawia trenażer przez Bluetooth na cel każdego interwału. Na Karoo trenażer zostaw połączony przez ANT+ w trybie Read-Only, żeby Karoo nim nie sterowało.</string>
     <string name="erg_trainer">Trenażer</string>
+    <string name="erg_ready">● ERG gotowy</string>
+    <string name="press_karoo_start">Start Karoo lub ▶</string>
+    <string name="trainer_outdoor_hint">Trenażer: wybierz profil indoor</string>
+    <string name="erg_pause">Na pauzie</string>
+    <string name="erg_pause_help">Co trzyma trenażer, gdy trening lub jazda stoi na pauzie, a także gdy w trakcie jazdy wybierzesz nowy trening i czeka na START: tyle % FTP. Wył.: opór puszczony. Po ukończonym treningu trenażer zawsze jest wolny.</string>
+    <string name="pause_40">40%</string>
+    <string name="pause_50">50%</string>
+    <string name="pause_60">60%</string>
+    <string name="erg_this_ride">ERG w tej jeździe</string>
+    <string name="erg_free_ride">Swobodnie</string>
+    <string name="erg_this_ride_help">Swobodnie: trenażer puszcza opór i jedziesz do celów sam. Wł.: wraca do mocy bieżącego interwału. Po zakończeniu jazdy ERG znów jest włączony.</string>
     <string name="chart_span_all">Cała jazda</string>
     <string name="chart_span_min">Ostatnie %1$d min</string>
     <string name="power_smoothing">Moc</string>

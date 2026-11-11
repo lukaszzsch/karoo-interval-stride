@@ -7,7 +7,10 @@ import io.hammerhead.karooext.internal.Emitter
 import io.hammerhead.karooext.models.ActiveRideProfile
 import io.hammerhead.karooext.models.FitEffect
 import io.hammerhead.karooext.models.InRideAlert
+import io.hammerhead.karooext.models.DataType
 import io.hammerhead.karooext.models.RideState
+import io.hammerhead.karooext.models.SavedDevices
+import io.hammerhead.karooext.models.StreamState
 import io.hammerhead.karooext.models.SystemNotification
 import io.hammerhead.karooext.models.WriteToSessionMesg
 import timber.log.Timber
@@ -209,13 +212,50 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
         )
     }
 
-    /** What the trainer should do now: hold [watts], let go (null), or not be driven at all. */
-    private data class ErgWanted(val address: String?, val active: Boolean, val watts: Int?)
+    /**
+     * What the trainer should do now: hold [watts], let go (null), or not be driven at all.
+     * [holdingTarget]: the watts are the workout's target (not the pause watts). [rideIdle]: no
+     * ride yet (connected only to show "ERG gotowy").
+     */
+    private data class ErgWanted(
+        val address: String?,
+        val active: Boolean,
+        val watts: Int?,
+        val holdingTarget: Boolean = false,
+        val rideIdle: Boolean = true,
+    )
+
+    /** ERG settings that decide [ErgWanted]: the trainer (null: ERG off here), off for this ride, pause %. */
+    private data class ErgConfig(val address: String?, val offThisRide: Boolean, val pausePct: Int)
 
     /**
-     * ERG: while a workout runs in a ride and ERG is on, drives the chosen trainer over Bluetooth
-     * FTMS to the current target; lets go of the resistance on pauses and steps without a target,
-     * and disconnects when the workout ends. Checked once a second, reconnecting after a drop.
+     * What the trainer should do for this workout state. [afterFinish]: a workout finished earlier
+     * in this ride, so the trainer stays free until the next one starts.
+     */
+    private fun ergWanted(st: ScreenState, ride: RideState, c: ErgConfig, afterFinish: Boolean): ErgWanted {
+        val idle = ride is RideState.Idle
+        // Connected while a workout is loaded and not finished, also before the ride (ERG gotowy).
+        val active = st.workoutLoaded && !st.finished
+        // Settings › Na pauzie: this % of FTP, or let go (0).
+        val pauseWatts = c.pausePct.takeIf { it > 0 }?.let { pct -> st.ftp?.let { it * pct / 100 } }?.takeIf { it > 0 }
+        val target = st.target?.takeIf { it > 0 }
+        val watts = when {
+            idle || c.offThisRide -> null
+            afterFinish && st.waiting -> null
+            // A workout picked mid-ride waits for START, or the ride / workout is paused.
+            st.waiting || ride is RideState.Paused || st.workoutPaused -> pauseWatts
+            else -> target
+        }
+        val holding = watts != null && !idle && !st.waiting && ride is RideState.Recording && !st.workoutPaused
+        return ErgWanted(c.address, active, watts, holdingTarget = holding, rideIdle = idle)
+    }
+
+    /**
+     * ERG: while a workout is loaded and ERG is on, drives the chosen trainer over Bluetooth FTMS
+     * to the current target. Connects before the ride already, so the start screen shows "ERG
+     * gotowy". On pauses (and a workout picked mid-ride, before its START) it holds the Na pauzie
+     * watts, or lets go when that's off; steps without a target and ERG off for this ride let go.
+     * Disconnects when the workout ends. Checked once a second, reconnecting after a drop.
      */
     private fun startErg() {
         val settings = ErgSettings.get(this)
@@ -231,6 +271,23 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
         val allowed = combine(settings.profiles, settings.activeProfileId, settings.onlyChosen, settings.chosen) { list, active, _, _ ->
             settings.allowedIn(list.firstOrNull { it.id == active })
         }
+        // A trainer profile (marked indoor, or one ERG runs in): the Karoo's start button starts the workout.
+        scope.launch {
+            combine(settings.profiles, settings.activeProfileId, allowed) { list, active, ok ->
+                ok || list.firstOrNull { it.id == active }?.indoor == true
+            }.distinctUntilChanged().collect { workout.setIndoor(it) }
+        }
+        // Before the ride, on a profile without ERG, with a workout waiting and the Karoo's power
+        // coming from the trainer: the start screen says to pick an indoor profile.
+        scope.launch {
+            val fromTrainer = combine(
+                karoo.consumerFlow<SavedDevices>().map { it.devices },
+                karoo.streamDataFlow(DataType.Type.POWER).map { (it as? StreamState.Streaming)?.dataPoint?.sourceId },
+            ) { devices, source -> powerFromTrainer(source, devices) }
+            combine(fromTrainer, workout.state, settings.enabled, settings.trainer, allowed) { trainerPower, st, on, trainer, ok ->
+                trainerPower && on && trainer != null && !ok && st.rideIdle && st.workoutLoaded && st.waiting
+            }.distinctUntilChanged().collect { workout.setTrainerOutdoor(it) }
+        }
         // Today's intensity: on screen and in ERG (st.target is already scaled); back to 100%
         // when the ride ends, so a weak day doesn't carry over.
         // Only with a trainer in ERG: otherwise targets stay as planned.
@@ -242,16 +299,26 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
         }
         scope.launch {
             karoo.consumerFlow<RideState>().map { it is RideState.Idle }.distinctUntilChanged().filter { it }
-                .collect { if (workout.state.value.workoutLoaded || settings.intensity.value != 100) settings.setIntensity(100) }
+                .collect {
+                    if (workout.state.value.workoutLoaded || settings.intensity.value != 100) settings.setIntensity(100)
+                    // ERG off for one ride only.
+                    settings.setOffThisRide(false)
+                }
         }
         scope.launch {
-            combine(workout.state, karoo.consumerFlow<RideState>(), settings.enabled, settings.trainer, allowed) { st, ride, on, trainer, ok ->
-                ErgWanted(
-                    address = if (on && ok) trainer?.first else null,
-                    active = ride !is RideState.Idle && st.workoutLoaded && !st.finished && !st.waiting,
-                    watts = if (ride is RideState.Recording && !st.workoutPaused) st.target?.takeIf { it > 0 } else null,
-                )
-            }.collect { wanted.value = it }
+            val config = combine(settings.enabled, settings.trainer, allowed, settings.offThisRide, settings.pausePct) { on, trainer, ok, off, pct ->
+                ErgConfig(if (on && ok) trainer?.first else null, off, pct)
+            }
+            var afterFinish = false
+            combine(workout.state, karoo.consumerFlow<RideState>(), config) { st, ride, c -> Triple(st, ride, c) }
+                .collect { (st, ride, c) ->
+                    when {
+                        ride is RideState.Idle -> afterFinish = false
+                        st.finished -> afterFinish = true
+                        st.workoutLoaded && !st.waiting -> afterFinish = false
+                    }
+                    wanted.value = ergWanted(st, ride, c, afterFinish)
+                }
         }
         scope.launch {
             var trainer: FtmsTrainer? = null
@@ -267,8 +334,12 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
                 released = false
                 workout.setErgActive(false)
             }
+            var wasIdle = true
             while (true) {
                 val w = wanted.value
+                // The ride started: retry a trainer that failed before it right away.
+                if (wasIdle && !w.rideIdle) retryAt = 0L
+                wasIdle = w.rideIdle
                 try {
                     if (w.address == null || !w.active || !ErgSettings.hasPermissions(this@IntervalExtension)) {
                         if (trainer != null) {
@@ -284,7 +355,8 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
                                 trainer = t
                                 t.open()
                                 // Tell the rider the trainer is driven now (the first seconds of a ride).
-                                ergAlert(getString(R.string.erg_alert_connected), getString(R.string.erg_alert_connected_detail, settings.trainer.value?.second ?: ""), ok = true)
+                                // Before the ride the start screen says "ERG gotowy" instead.
+                                if (!w.rideIdle) ergAlert(getString(R.string.erg_alert_connected), getString(R.string.erg_alert_connected_detail, settings.trainer.value?.second ?: ""), ok = true)
                                 warnedAt = 0L
                             }
                         }
@@ -295,14 +367,15 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
                                     t.resume()
                                     released = false
                                 }
-                                // Send on every change, and again every 15 s in case the trainer missed one.
+                                // Send on every change, and again every 2 s in case the trainer missed one.
                                 val now = System.currentTimeMillis()
                                 if (sent != w.watts || now - sentAt >= ERG_RESEND_MS) {
                                     t.setTargetPower(w.watts)
                                     sent = w.watts
                                     sentAt = now
                                 }
-                                workout.setErgActive(true)
+                                // "ERG" on the Target tile only while it holds the workout's target.
+                                workout.setErgActive(w.holdingTarget)
                             } else if (!released) {
                                 t.pause()
                                 released = true
@@ -314,14 +387,16 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
                 } catch (e: Exception) {
                     Timber.w(e, "ERG failed")
                     drop()
-                    retryAt = System.currentTimeMillis() + ERG_RETRY_MS
+                    // Before the ride (trainer maybe still off): try again less often, without a warning.
+                    retryAt = System.currentTimeMillis() + if (w.rideIdle) ERG_RETRY_IDLE_MS else ERG_RETRY_MS
                     // The workout runs but the trainer can't be reached: say so (at most once a minute).
-                    if (System.currentTimeMillis() - warnedAt >= ERG_WARN_EVERY_MS) {
+                    if (!w.rideIdle && System.currentTimeMillis() - warnedAt >= ERG_WARN_EVERY_MS) {
                         warnedAt = System.currentTimeMillis()
                         ergAlert(getString(R.string.erg_alert_failed), getString(R.string.erg_alert_failed_detail), ok = false)
                     }
                 }
                 connected.value = trainer?.isUp == true
+                workout.setErgConnected(trainer?.isUp == true)
                 delay(ERG_TICK_MS)
             }
         }
@@ -428,7 +503,8 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
         /** Workouts shorter than this get no halfway banner. */
         private const val MIN_HALFWAY_SEC = 20 * 60
         private const val ERG_RETRY_MS = 10_000L
-        private const val ERG_RESEND_MS = 15_000L
+        private const val ERG_RETRY_IDLE_MS = 30_000L
+        private const val ERG_RESEND_MS = 2_000L
         private const val ERG_WARN_EVERY_MS = 60_000L
         private const val FIRST_RETRY_MS = 30_000L
         private const val MAX_RETRY_MS = 10 * 60_000L

@@ -78,6 +78,18 @@ class TrainerActivity : AppearanceActivity() {
         form.addView(settingsHelp(getString(R.string.erg_help)))
         form.addView(settingsDivider())
 
+        // What the trainer holds on pauses: a share of FTP, or let go.
+        form.addView(settingsHeading(R.drawable.ic_pause, getString(R.string.erg_pause)))
+        val pauseLabels = mapOf(0 to R.string.off, 40 to R.string.pause_40, 50 to R.string.pause_50, 60 to R.string.pause_60)
+        form.addView(
+            segmented(ErgSettings.PAUSE_CHOICES.map { pauseLabels.getValue(it) to it }, erg.pausePct.value) { pct ->
+                erg.setPausePct(pct)
+                render()
+            },
+        )
+        form.addView(settingsHelp(getString(R.string.erg_pause_help)))
+        form.addView(settingsDivider())
+
         // Where ERG applies: every indoor profile, or only the profiles picked here.
         form.addView(settingsHeading(R.drawable.ic_bolt_filled, getString(R.string.erg_profiles)))
         form.addView(

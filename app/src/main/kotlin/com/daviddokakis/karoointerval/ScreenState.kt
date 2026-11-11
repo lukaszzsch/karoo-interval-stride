@@ -98,6 +98,14 @@ data class ScreenState(
     val tileOutline: Boolean = false,
     /** FTP from the Karoo rider profile, used when the plan has none. */
     val profileFtp: Int? = null,
+    /** A trainer profile (marked indoor, or one ERG runs in): the Karoo's start button starts the workout. */
+    val indoor: Boolean = false,
+    /** No ride yet (the Karoo isn't recording or paused). */
+    val rideIdle: Boolean = true,
+    /** The trainer is connected for ERG (before START: "ERG gotowy"). */
+    val ergConnected: Boolean = false,
+    /** Before the ride, on a profile without ERG, the Karoo's power comes from the trainer: hint to pick an indoor profile. */
+    val trainerOutdoor: Boolean = false,
 ) {
     val workoutLoaded: Boolean get() = plan != null
     val stepCount: Int get() = plan?.steps?.size ?: 0

@@ -43,6 +43,26 @@ class ErgSettings private constructor(context: Context) {
         _intensity.value = v
     }
 
+    private val _pausePct = MutableStateFlow(prefs.getInt(KEY_PAUSE_PCT, DEFAULT_PAUSE_PCT))
+    /**
+     * What the trainer holds while the workout or ride is paused, or a new workout waits for
+     * START mid-ride: this % of FTP, or 0 to let go of the resistance.
+     */
+    val pausePct: StateFlow<Int> = _pausePct
+
+    fun setPausePct(pct: Int) {
+        prefs.edit().putInt(KEY_PAUSE_PCT, pct).apply()
+        _pausePct.value = pct
+    }
+
+    private val _offThisRide = MutableStateFlow(false)
+    /** ERG turned off for this ride on the Workouts page (free ride); back on when the ride ends. */
+    val offThisRide: StateFlow<Boolean> = _offThisRide
+
+    fun setOffThisRide(off: Boolean) {
+        _offThisRide.value = off
+    }
+
     /** A Karoo ride profile seen in use: its name and whether it's marked indoor. */
     data class Profile(val id: String, val name: String, val indoor: Boolean)
 
@@ -125,6 +145,10 @@ class ErgSettings private constructor(context: Context) {
         private const val KEY_ACTIVE = "active_profile"
         private const val KEY_ONLY_CHOSEN = "only_chosen"
         private const val KEY_CHOSEN = "chosen_profiles"
+        private const val KEY_PAUSE_PCT = "pause_pct"
+        /** Choices for [pausePct] (0: let go). */
+        val PAUSE_CHOICES = listOf(0, 40, 50, 60)
+        const val DEFAULT_PAUSE_PCT = 50
         const val MIN_INTENSITY = 50
         const val MAX_INTENSITY = 150
 
@@ -146,6 +170,21 @@ class ErgSettings private constructor(context: Context) {
 
         fun hasPermissions(context: Context): Boolean =
             PERMISSIONS.all { context.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }
+    }
+}
+
+/**
+ * Whether the Karoo's power reading ([source], a data point's sourceId) comes from a trainer paired
+ * on the Karoo: an enabled sensor with trainer data. Bluetooth: its address; ANT+: its device
+ * number, the first part of the id ("28436-17-5").
+ */
+fun powerFromTrainer(source: String?, devices: List<io.hammerhead.karooext.models.SavedDevices.SavedDevice>): Boolean {
+    if (source == null) return false
+    return devices.any { d ->
+        d.enabled && "TYPE_TRAINER_ID" in d.supportedDataTypes && (
+            source.equals(d.id, ignoreCase = true) ||
+                (d.connectionType == "ANT_PLUS" && source.startsWith(d.id.substringBefore('-') + "-"))
+            )
     }
 }
 

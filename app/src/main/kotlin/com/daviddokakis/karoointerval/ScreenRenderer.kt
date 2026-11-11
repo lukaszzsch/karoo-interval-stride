@@ -250,11 +250,18 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             if (karoo) v.setViewVisibility(R.id.paused_spacer, View.GONE)
             if (s.waiting) {
                 // Waiting for START: "Tap ▶ to start" (or the start countdown), the pill pulsing.
+                // Before the ride on a trainer profile the Karoo's start button starts both; on a
+                // profile without ERG with the trainer sending power, an orange hint instead.
+                val hint = s.countdown == null && s.trainerOutdoor
                 v.setTextViewText(
                     R.id.interval_label,
-                    s.countdown?.let { context.getString(R.string.start_countdown, it) } ?: context.getString(R.string.tap_to_start),
+                    s.countdown?.let { context.getString(R.string.start_countdown, it) } ?: when {
+                        hint -> context.getString(R.string.trainer_outdoor_hint)
+                        s.indoor && s.rideIdle -> context.getString(R.string.press_karoo_start)
+                        else -> context.getString(R.string.tap_to_start)
+                    },
                 )
-                v.setTextColor(R.id.interval_label, color(R.color.watts_in_range))
+                v.setTextColor(R.id.interval_label, color(if (hint) R.color.paused else R.color.watts_in_range))
                 blinkOn = !blinkOn
                 if (resumeShown) {
                     val (on, off) = if (karoo) R.drawable.bg_resume_karoo to R.drawable.bg_resume_karoo_alt else R.drawable.bg_resume to R.drawable.bg_resume_alt
@@ -497,6 +504,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         v.setOnClickPendingIntent(R.id.move_cancelled, dismissCancelledIntent)
 
         applyTopRow(v, s, top, gaugeMode, karoo, free = false)
+        if (s.waiting && s.ergConnected) showErgReady(v, s, top, gaugeMode, karoo)
         applyTileStyle(v, s, gaugeMode)
 
         // Chart
@@ -567,6 +575,29 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             v.setTextViewText(R.id.hr_label, context.getString(R.string.target))
             v.setTextViewText(R.id.hr, gaugeTargetText(s))
         }
+    }
+
+    /**
+     * Before START with the trainer connected: "● ERG gotowy" (green) as the label of wherever the
+     * target shows, since that's what the trainer will hold from START.
+     */
+    private fun showErgReady(v: RemoteViews, s: ScreenState, top: TopRow, gaugeMode: Boolean, karoo: Boolean) {
+        val pct = if (s.intensityPct != 100) " ${s.intensityPct}%" else ""
+        val label = context.getString(R.string.erg_ready) + pct
+        if (gaugeMode && karoo && top == TopRow.TARGET) {
+            // Karoo-style gauge: the top row has no label, so it goes in front of the target.
+            v.setTextViewText(R.id.target, "$label · ${gaugeTargetText(s)}")
+            return
+        }
+        val id = when {
+            // Gauge layouts: the target is in the top row, or in the HR tile when something else is up there.
+            gaugeMode -> if (top == TopRow.TARGET) R.id.target_label else R.id.hr_label
+            // Number layouts: the Target tile, unless the target moved to the top row.
+            top == TopRow.TARGET -> return
+            else -> R.id.target_label
+        }
+        v.setTextViewText(id, label)
+        v.setTextColor(id, color(R.color.watts_in_range))
     }
 
     /** Settings › Tiles: outline instead of the grey fill (Lap avg, Target or HR, Cadence). */

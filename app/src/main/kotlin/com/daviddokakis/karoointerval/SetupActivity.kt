@@ -202,6 +202,20 @@ class SetupActivity : AppearanceActivity() {
         }
     }
 
+    /** "ERG w tej jeździe": Wł. / Swobodnie (trainer free, ride the targets yourself) until the ride ends. */
+    private fun ergThisRideRows(erg: ErgSettings) = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(10) }
+        addView(text(getString(R.string.erg_this_ride), 14f, bold = true).apply { setPadding(0, 0, 0, dp(4)) })
+        addView(
+            segmented(listOf(R.string.on to false, R.string.erg_free_ride to true), erg.offThisRide.value) { off ->
+                erg.setOffThisRide(off)
+                render()
+            },
+        )
+        addView(text(getString(R.string.erg_this_ride_help), 12f, secondary = true).apply { setPadding(0, dp(4), 0, 0) })
+    }
+
     /** "Rate the ride (RPE)", or the current rating; opens the rating page. */
     private fun rateButton() = button(
         RatingStore.get(this).rating.value.summary(this)?.let { getString(R.string.rate_button_rated, it) }
@@ -264,9 +278,12 @@ class SetupActivity : AppearanceActivity() {
                         }.apply { (layoutParams as LinearLayout.LayoutParams).topMargin = dp(8) },
                     )
                     addView(rateButton())
-                    // Today's intensity: only with a trainer in ERG.
+                    // ERG for this ride and today's intensity: only with a trainer in ERG.
                     ErgSettings.get(this@SetupActivity).let { erg ->
-                        if (erg.usableNow) addView(intensityRow())
+                        if (erg.usableNow) {
+                            addView(ergThisRideRows(erg))
+                            addView(intensityRow())
+                        }
                     }
                 },
             )

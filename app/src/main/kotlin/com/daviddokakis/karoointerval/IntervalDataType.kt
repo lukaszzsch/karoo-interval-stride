@@ -58,6 +58,7 @@ class IntervalDataType(
                     s.countdown, s.stepIndex, s.workoutPaused, s.chartZoomed, s.plan?.id, s.selectTarget,
                     s.selectProgress, s.moveCancelled, s.targetShowsRange, s.wattsMode, s.karooStyle, s.appearance, s.navigating, s.hrShowsLap, s.lapShowsNp,
                     s.autoConfirmLeft, s.finishArmed, s.finished, s.ergActive, s.intensityPct, s.clockShowsElapsed, s.freeChartSpan, s.waiting, s.summary, s.freePowerTile, s.freeHrTile, s.topRow, s.tileOutline, s.rideNp, s.rideIf, s.rideTss,
+                    s.indoor, s.rideIdle, s.ergConnected, s.trainerOutdoor,
                 )
                 val since = SystemClock.elapsedRealtime() - lastRender
                 val changed = key != shown
@@ -116,6 +117,10 @@ class IntervalDataType(
         val rideNp: Int?,
         val rideIf: Double?,
         val rideTss: Int?,
+        val indoor: Boolean,
+        val rideIdle: Boolean,
+        val ergConnected: Boolean,
+        val trainerOutdoor: Boolean,
     )
 
     companion object {
