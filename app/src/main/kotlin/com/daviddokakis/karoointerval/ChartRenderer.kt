@@ -23,6 +23,16 @@ class ChartRenderer(private val context: Context) {
 
     private fun color(id: Int) = ContextCompat.getColor(context, id)
 
+    private val karooZoneColors = intArrayOf(R.color.pz1, R.color.pz2, R.color.pz3, R.color.pz4, R.color.pz5, R.color.pz6)
+
+    /** A bar in the colour of the Karoo power zone of [watts]; grey without zones or an FTP. */
+    private fun karooBar(watts: Int, zones: List<IntRange>, ftp: Int?): Zones.BarStyle =
+        if (zones.size < 2 && (ftp == null || ftp <= 0)) {
+            Zones.BarStyle(R.color.done, null)
+        } else {
+            Zones.BarStyle(karooZoneColors[powerZoneIndex(watts, zones, ftp)], null)
+        }
+
     /** [c] mixed 60% toward white: how ridden parts of the profile look. */
     private fun whitened(c: Int): Int {
         fun mix(v: Int) = (v + (255 - v) * 0.6f).toInt()
@@ -114,7 +124,9 @@ class ChartRenderer(private val context: Context) {
                 lineTo(x1, bottom)
                 close()
             }
-            val bar = Zones.barStyle(step.avgWatts, ftp)
+            // The Karoo's 6 power zones and colours (zones from the rider profile, else the
+            // Karoo's default split of the FTP), as on the Karoo's own power zone pages.
+            val bar = karooBar(step.avgWatts, state.powerZones, state.profileFtp ?: ftp)
             // Everything already ridden is whitened (its zone colour 60% toward white): finished
             // steps whole, the current step up to the "now" marker. The jump target is solid blue.
             val done = !card && i < state.stepIndex
