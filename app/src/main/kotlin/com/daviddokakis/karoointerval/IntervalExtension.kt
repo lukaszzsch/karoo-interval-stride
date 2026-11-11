@@ -247,7 +247,7 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
             combine(workout.state, karoo.consumerFlow<RideState>(), settings.enabled, settings.trainer, allowed) { st, ride, on, trainer, ok ->
                 ErgWanted(
                     address = if (on && ok) trainer?.first else null,
-                    active = ride !is RideState.Idle && st.workoutLoaded && !st.finished,
+                    active = ride !is RideState.Idle && st.workoutLoaded && !st.finished && !st.waiting,
                     watts = if (ride is RideState.Recording && !st.workoutPaused) st.target?.takeIf { it > 0 } else null,
                 )
             }.collect { wanted.value = it }

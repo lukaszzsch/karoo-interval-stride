@@ -17,6 +17,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -53,7 +54,7 @@ class WorkoutSession(
     /** The workout is over (last interval done, or ended early with ⏭): one lap, a beep. */
     private fun finishWorkout() {
         val step = _state.value.currentStep ?: return
-        _state.update { it.copy(finished = true, finishArmed = false, elapsedInStepSec = step.durationSec) }
+        _state.update { it.copy(finished = true, finishArmed = false, elapsedInStepSec = step.durationSec, summary = summaryNow()) }
         karoo.dispatch(MarkLap)
         beep(GO_TONE)
         store.clearProgress()
@@ -103,11 +104,23 @@ class WorkoutSession(
             karoo.streamDataFlow(DataType.Type.POWER).collect { onPower(it.single()) }
         }
         scope.launch {
-            // …and the big number shows Karoo's 3-second average power.
-            karoo.streamDataFlow(DataType.Type.SMOOTHED_3S_AVERAGE_POWER).collect { s ->
-                _state.update { it.copy(power3s = s.single()?.roundToInt()) }
+            // …and the big number shows Karoo's power, smoothed as chosen in Settings (instant,
+            // 3 s, 5 s or 10 s); switching takes effect right away.
+            store.powerSmoothing.collectLatest { smoothing ->
+                karoo.streamDataFlow(smoothing.power).collect { s ->
+                    _state.update { it.copy(power3s = s.single()?.roundToInt()) }
+                }
             }
         }
+        scope.launch {
+            karoo.streamDataFlow(DataType.Type.HEART_RATE).collect { s ->
+                // The finished workout's average heart rate counts while it runs.
+                s.single()?.let { hr -> if (workoutRunning()) { hrSum += hr; hrSamples++ } }
+            }
+        }
+        collectInt(DataType.Type.AVERAGE_POWER) { v -> _state.update { it.copy(rideAvgPower = v) } }
+        collectInt(DataType.Type.AVERAGE_HR) { v -> _state.update { it.copy(rideAvgHr = v) } }
+        scope.launch { store.topRow.collect { t -> _state.update { it.copy(topRow = t) } } }
         scope.launch {
             karoo.streamDataFlow(DataType.Type.HEART_RATE).collect { s ->
                 _state.update { it.copy(heartRate = s.single()?.roundToInt()) }
@@ -161,7 +174,7 @@ class WorkoutSession(
         scope.launch { tickLoop() }
         scope.launch { store.karooStyle.collect { on -> _state.update { it.copy(karooStyle = on) } } }
         scope.launch { store.appearance.collect { a -> _state.update { it.copy(appearance = a) } } }
-        _state.update { it.copy(wattsMode = store.wattsMode, targetShowsRange = store.targetShowsRange, lapShowsNp = store.lapShowsNp, hrShowsLap = store.hrShowsLap, clockShowsElapsed = store.clockShowsElapsed, freeChartSpan = store.freeChartSpan) }
+        _state.update { it.copy(wattsMode = store.wattsMode, targetShowsRange = store.targetShowsRange, lapShowsNp = store.lapShowsNp, hrShowsLap = store.hrShowsLap, clockShowsElapsed = store.clockShowsElapsed, freeChartSpan = store.freeChartSpan, freePowerTile = store.freePowerTile, freeHrTile = store.freeHrTile) }
     }
 
     /** Today's intensity in % (targets and ERG follow it). */
@@ -198,6 +211,19 @@ class WorkoutSession(
         scope.launch {
             val st = _state.value
             if (st.plan == null) return@launch
+            // Before START: ⏮ / ⏭ pick the interval to start at (round at the ends); they also
+            // cancel a start countdown.
+            if (st.waiting) {
+                if (countdownJob?.isActive == true) {
+                    cancelCountdown()
+                    beep(CANCEL_TONE)
+                    return@launch
+                }
+                val index = Math.floorMod(st.stepIndex + delta, st.stepCount)
+                elapsedInStepMs = 0
+                _state.update { it.copy(stepIndex = index, elapsedInStepSec = 0) }
+                return@launch
+            }
             // ⏭ on the last interval: end the workout early, after a second tap to confirm.
             if (delta > 0 && !st.hasNext && !st.finished && selectionPos == null && countdownJob?.isActive != true) {
                 if (st.finishArmed) {
@@ -247,6 +273,13 @@ class WorkoutSession(
     /** Tap on the countdown: skip the rest of it and start the chosen interval now. */
     fun jumpNow() {
         scope.launch {
+            // Tap on the start countdown: start right away.
+            if (_state.value.waiting && countdownJob?.isActive == true) {
+                countdownJob?.cancel()
+                countdownJob = null
+                beginWorkout()
+                return@launch
+            }
             Timber.i("Jump now tapped (countdown running: ${countdownJob?.isActive})")
             val target = _state.value.jumpTarget ?: return@launch
             if (countdownJob?.isActive != true) return@launch
@@ -360,6 +393,24 @@ class WorkoutSession(
         }
     }
 
+    /** Free ride: tap on the power tile: lap avg → lap NP → ride avg. */
+    fun toggleFreePower() {
+        scope.launch {
+            val v = (_state.value.freePowerTile + 1) % 3
+            store.freePowerTile = v
+            _state.update { it.copy(freePowerTile = v) }
+        }
+    }
+
+    /** Free ride: tap on the HR tile: heart rate now → lap avg → ride avg. */
+    fun toggleFreeHr() {
+        scope.launch {
+            val v = (_state.value.freeHrTile + 1) % 3
+            store.freeHrTile = v
+            _state.update { it.copy(freeHrTile = v) }
+        }
+    }
+
     /** Free ride: tap on the HR tile switches between the current heart rate and the lap's average. */
     fun toggleLapHr() {
         scope.launch {
@@ -395,6 +446,17 @@ class WorkoutSession(
      */
     fun togglePause() {
         scope.launch {
+            // Before START, the play button (and the remote's pause / resume) starts the workout:
+            // a 5 s countdown, and a second tap cancels it.
+            if (_state.value.waiting) {
+                if (countdownJob?.isActive == true) {
+                    cancelCountdown()
+                    beep(CANCEL_TONE)
+                } else {
+                    startCountdown(_state.value.stepIndex)
+                }
+                return@launch
+            }
             val nowPaused = !_state.value.workoutPaused
             if (nowPaused) {
                 cancelCountdown()
@@ -411,21 +473,26 @@ class WorkoutSession(
         resetLap()
         val (index, elapsedSec) = plan?.let { store.restoreProgress(it) } ?: (0 to 0)
         elapsedInStepMs = elapsedSec * 1000L
+        resetTotals()
+        // A workout picked fresh waits for START; one resumed mid-way (app restarted in a ride)
+        // carries on.
+        val waiting = plan != null && index == 0 && elapsedSec == 0
         _state.update {
-            it.copy(plan = plan, stepIndex = index, elapsedInStepSec = elapsedSec, finished = false, lapAvg = null, workoutPaused = false)
+            it.copy(plan = plan, stepIndex = index, elapsedInStepSec = elapsedSec, finished = false, lapAvg = null, workoutPaused = false, waiting = waiting, summary = null)
         }
         Timber.i("Loaded workout ${plan?.name} at step $index + ${elapsedSec}s")
     }
 
     private fun resetToStart() {
         val st = _state.value
-        if (st.plan == null || (st.stepIndex == 0 && elapsedInStepMs == 0L && !st.finished && !st.workoutPaused)) return
+        if (st.plan == null || (st.stepIndex == 0 && elapsedInStepMs == 0L && !st.finished && !st.workoutPaused && st.waiting)) return
         cancelCountdown()
         resetLap()
         elapsedInStepMs = 0
         store.clearProgress()
-        _state.update { it.copy(stepIndex = 0, elapsedInStepSec = 0, finished = false, lapAvg = null, workoutPaused = false) }
-        Timber.i("No ride active: workout reset to the first interval")
+        resetTotals()
+        _state.update { it.copy(stepIndex = 0, elapsedInStepSec = 0, finished = false, lapAvg = null, workoutPaused = false, waiting = true, summary = null) }
+        Timber.i("No ride active: workout reset to the first interval, waiting for START")
     }
 
     private suspend fun tickLoop() {
@@ -438,7 +505,8 @@ class WorkoutSession(
             lastTick = now
             val st = _state.value
             val step = st.currentStep ?: continue
-            if (!recording || st.finished || st.workoutPaused) continue
+            if (!recording || st.finished || st.workoutPaused || st.waiting) continue
+            workoutMs += dt
 
             val before = (step.durationSec * 1000L - elapsedInStepMs) / 1000
             elapsedInStepMs += dt
@@ -475,9 +543,51 @@ class WorkoutSession(
                 delay(1000)
             }
             countdownJob = null
-            goToStep(target, natural = false)
+            if (_state.value.waiting) beginWorkout() else goToStep(target, natural = false)
         }
     }
+
+    /** START (after its countdown): the workout's clock runs from the chosen interval. */
+    private fun beginWorkout() {
+        Timber.i("Workout started at step ${_state.value.stepIndex + 1}")
+        elapsedInStepMs = 0
+        resetLap()
+        resetTotals()
+        _state.update { it.copy(waiting = false, countdown = null, jumpTarget = null, elapsedInStepSec = 0) }
+        karoo.dispatch(MarkLap)
+        // A short rising tune.
+        karoo.dispatch(PlayBeepPattern(listOf(PlayBeepPattern.Tone(1000, 120), PlayBeepPattern.Tone(null, 60), PlayBeepPattern.Tone(1500, 120), PlayBeepPattern.Tone(null, 60), PlayBeepPattern.Tone(2000, 250))))
+        saveProgress()
+    }
+
+    /** Running for the summary: started, not finished, ride recording, workout not paused. */
+    private fun workoutRunning(): Boolean {
+        val st = _state.value
+        return recording && st.workoutLoaded && !st.waiting && !st.finished && !st.workoutPaused
+    }
+
+    private var workoutMs = 0L
+    private var powerSum = 0.0
+    private var powerSamples = 0
+    private var hrSum = 0.0
+    private var hrSamples = 0
+    private val workoutNp = LapNp()
+
+    private fun resetTotals() {
+        workoutMs = 0
+        powerSum = 0.0
+        powerSamples = 0
+        hrSum = 0.0
+        hrSamples = 0
+        workoutNp.reset()
+    }
+
+    private fun summaryNow() = WorkoutSummary(
+        timeSec = (workoutMs / 1000).toInt(),
+        avgPower = if (powerSamples > 0) (powerSum / powerSamples).roundToInt() else null,
+        np = workoutNp.value,
+        avgHr = if (hrSamples > 0) (hrSum / hrSamples).roundToInt() else null,
+    )
 
     private fun goToStep(index: Int, natural: Boolean) {
         // A step change (natural or not) clears any pending jump, so a forward jump that was
@@ -521,6 +631,11 @@ class WorkoutSession(
     private fun onPower(watts: Double?) {
         val st = _state.value
         // The lap average keeps counting while the workout is paused; only the interval timer stops.
+        if (watts != null && workoutRunning()) {
+            powerSum += watts
+            powerSamples++
+            workoutNp.add(SystemClock.elapsedRealtime(), watts)
+        }
         if (watts != null && recording && st.workoutLoaded && !st.finished) {
             lapSum += watts
             lapSamples++

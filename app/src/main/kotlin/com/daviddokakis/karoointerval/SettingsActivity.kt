@@ -69,6 +69,28 @@ class SettingsActivity : AppearanceActivity() {
         form.addView(settingsHelp(getString(R.string.appearance_help)))
         form.addView(settingsDivider())
 
+        // Power smoothing: Instant / 3 s / 5 s / 10 s
+        form.addView(settingsHeading(R.drawable.ic_bolt_filled, getString(R.string.power_smoothing)))
+        form.addView(
+            segmented(Smoothing.entries.map { it.label to it }, store.powerSmoothing.value) { picked ->
+                store.setPowerSmoothing(picked)
+                render()
+            },
+        )
+        form.addView(settingsHelp(getString(R.string.power_smoothing_help)))
+        form.addView(settingsDivider())
+
+        // Top row: Auto / Heart rate / Cadence / Target
+        form.addView(settingsHeading(R.drawable.ic_heart, getString(R.string.top_row)))
+        form.addView(
+            segmented(TopRow.entries.map { it.label to it }, store.topRow.value) { picked ->
+                store.setTopRow(picked)
+                render()
+            },
+        )
+        form.addView(settingsHelp(getString(R.string.top_row_help)))
+        form.addView(settingsDivider())
+
         // Karoo style: Off / On
         form.addView(settingsHeading(R.drawable.ic_style, getString(R.string.karoo_style)))
         form.addView(

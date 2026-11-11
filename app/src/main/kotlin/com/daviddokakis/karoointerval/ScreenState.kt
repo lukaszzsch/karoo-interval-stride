@@ -78,6 +78,18 @@ data class ScreenState(
     val powerZones: List<IntRange> = emptyList(),
     /** Free-ride power chart span: 0 whole ride, 1 last 60 min, 2 last 20 min, 3 last 5 min. */
     val freeChartSpan: Int = 0,
+    /** A workout is loaded but not started yet (START WORKOUT): its clock doesn't run. */
+    val waiting: Boolean = false,
+    /** The finished workout's time, average power, NP and heart rate. */
+    val summary: WorkoutSummary? = null,
+    /** Free ride: power tile value (0 lap avg, 1 lap NP, 2 ride avg) and HR tile (0 now, 1 lap, 2 ride). */
+    val freePowerTile: Int = 0,
+    val freeHrTile: Int = 0,
+    /** The whole ride's average power and heart rate (Karoo). */
+    val rideAvgPower: Int? = null,
+    val rideAvgHr: Int? = null,
+    /** What the top row shows. */
+    val topRow: TopRow = TopRow.AUTO,
     /** FTP from the Karoo rider profile, used when the plan has none. */
     val profileFtp: Int? = null,
 ) {

@@ -94,6 +94,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     private val lapNpToggleIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_LAP_NP, 13) }
     private val clockToggleIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_CLOCK, 16) }
     private val freeChartIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_FREE_CHART, 17) }
+    private val freePowerIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_FREE_POWER, 18) }
+    private val freeHrIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_FREE_HR, 19) }
     private val wattsColorIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_WATTS_COLOR, 7) }
     private val rateIntent: PendingIntent by lazy {
         PendingIntent.getActivity(
@@ -143,6 +145,9 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         // tile steps aside so it fits (the gauge layouts show the target in the top row instead).
         lapHiddenForJump = !gaugeMode && s.landStep != null
         intensityPct = s.intensityPct
+        val top = topOf(s, gaugeMode, free = false)
+        if (top == TopRow.CADENCE) cadTileShown = false
+        if (gaugeMode && top != TopRow.TARGET) hrText = gaugeTargetText(s) // the HR tile shows the target
         applyTextSizes(v, gaugeMode, karoo)
 
         v.setViewVisibility(R.id.content, View.VISIBLE)
@@ -201,7 +206,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         // Pause / resume (top right). Paused by you: green half-pill with a filled play symbol.
         // Ride paused by Karoo: hidden, since the workout resumes with the ride.
         val ridePaused = s.paused
-        val resumeShown = s.workoutPaused && !ridePaused
+        // Before START the green play pill is the start button (tap again to cancel the countdown).
+        val resumeShown = (s.workoutPaused || s.waiting) && !ridePaused
         // Small grey pause button normally; the big green resume half-pill while you've paused.
         v.setViewVisibility(
             R.id.btn_pause,
@@ -242,7 +248,19 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             v.setViewVisibility(R.id.paused_box, View.GONE)
             if (karoo) v.setViewVisibility(R.id.icon_timer, View.VISIBLE)
             if (karoo) v.setViewVisibility(R.id.paused_spacer, View.GONE)
-            if (s.finished) {
+            if (s.waiting) {
+                // Waiting for START: "Tap ▶ to start" (or the start countdown), the pill pulsing.
+                v.setTextViewText(
+                    R.id.interval_label,
+                    s.countdown?.let { context.getString(R.string.start_countdown, it) } ?: context.getString(R.string.tap_to_start),
+                )
+                v.setTextColor(R.id.interval_label, color(R.color.watts_in_range))
+                blinkOn = !blinkOn
+                if (resumeShown) {
+                    val (on, off) = if (karoo) R.drawable.bg_resume_karoo to R.drawable.bg_resume_karoo_alt else R.drawable.bg_resume to R.drawable.bg_resume_alt
+                    setBg(v, R.id.btn_resume, if (blinkOn) on else off)
+                }
+            } else if (s.finished) {
                 // Tap "Workout complete · Rate the ride" to rate.
                 v.setOnClickPendingIntent(R.id.interval_label, rateIntent)
                 v.setTextViewText(
@@ -260,7 +278,9 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         // Tap the clock: time left in the interval (−1:35, default) ↔ time in it so far (3:25).
         v.setTextViewText(
             R.id.time_left,
-            if (s.clockShowsElapsed) {
+            if (s.waiting) {
+                s.currentStep?.let { formatClock(it.durationSec) } ?: "--:--"
+            } else if (s.clockShowsElapsed) {
                 s.currentStep?.let { formatClock(s.elapsedInStepSec.coerceAtMost(it.durationSec)) } ?: "--:--"
             } else {
                 s.intervalRemainingSec?.let { "\u2212" + formatClock(it) } ?: "--:--"
@@ -361,6 +381,27 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             val choosing = s.selectTarget?.let { s.plan?.steps?.getOrNull(it) }
             val next = s.nextStep
             when {
+                s.waiting -> {
+                    // "First up" or, after ⏮ / ⏭, "Start at 3 / 16": the interval it starts with.
+                    v.setTextViewText(
+                        R.id.next_label,
+                        if (s.stepIndex == 0) context.getString(R.string.first_up) else context.getString(R.string.start_at, s.stepIndex + 1, s.stepCount),
+                    )
+                    v.setViewVisibility(R.id.next_label, View.VISIBLE)
+                    v.setTextViewText(R.id.next_value, s.currentStep?.let { summary(it) } ?: "")
+                    v.setTextColor(R.id.next_value, color(R.color.text))
+                }
+                s.finished && s.summary != null -> {
+                    // Workout complete: its time and average power, NP and heart rate.
+                    val sm = s.summary
+                    v.setTextViewText(
+                        R.id.next_label,
+                        (listOf(context.getString(R.string.summary_label)) + listOfNotNull(sm.np?.let { "NP $it" }, sm.avgHr?.let { context.getString(R.string.bpm_value, it) })).joinToString(SEP),
+                    )
+                    v.setViewVisibility(R.id.next_label, View.VISIBLE)
+                    v.setTextViewText(R.id.next_value, listOfNotNull(formatClock(sm.timeSec), sm.avgPower?.let { "$it W" }).joinToString(SEP))
+                    v.setTextColor(R.id.next_value, color(R.color.text))
+                }
                 choosing != null -> {
                     // How far the jump goes, counted in intervals from where you are.
                     val distance = (s.selectTarget ?: s.stepIndex) - s.stepIndex
@@ -436,11 +477,13 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         // Taps may or may not reach a data field on Karoo; the bonus actions (remote buttons) always work.
         v.setOnClickPendingIntent(R.id.btn_skip, if (skipEnabled) nextIntent else null)
         v.setOnClickPendingIntent(R.id.btn_previous, previousIntent)
-        v.setOnClickPendingIntent(R.id.next_mid, cancelSelectionIntent)
+        v.setOnClickPendingIntent(R.id.next_mid, if (s.waiting) pauseIntent else cancelSelectionIntent)
         v.setOnClickPendingIntent(R.id.countdown_box, jumpNowIntent)
         v.setOnClickPendingIntent(R.id.btn_confirm, confirmIntent)
         v.setOnClickPendingIntent(R.id.btn_confirm_x, cancelMoveIntent)
         v.setOnClickPendingIntent(R.id.move_cancelled, dismissCancelledIntent)
+
+        applyTopRow(v, s, top, gaugeMode, karoo, free = false)
 
         // Chart
         val chartW = (config.viewSize.first - 16 * density).toInt()
@@ -453,6 +496,65 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         return v
     }
 
+    /**
+     * What the top row shows. AUTO: heart rate above the big number, the target above the gauge.
+     * Without a workout there's no target: the gauge's top row keeps the last lap, the number
+     * layouts heart rate.
+     */
+    private fun topOf(s: ScreenState, gaugeMode: Boolean, free: Boolean): TopRow = when (s.topRow) {
+        TopRow.AUTO -> if (gaugeMode) TopRow.TARGET else TopRow.HR
+        TopRow.TARGET -> if (free && !gaugeMode) TopRow.HR else TopRow.TARGET
+        else -> s.topRow
+    }
+
+    /** The target as the gauge's top row writes it: "161 – 189", or the single target. */
+    private fun gaugeTargetText(s: ScreenState): String {
+        val band = s.targetRange
+        return if (band != null && band.first != band.last) "${band.first} – ${band.last}" else s.target?.toString() ?: "--"
+    }
+
+    /**
+     * Puts heart rate, cadence or the target in the top row (Settings › Top row). What moves up
+     * leaves its tile: with the target at the top of a number layout the Target tile shows heart
+     * rate; with heart rate or cadence above the gauge, its HR tile shows the target. Cadence at
+     * the top hides the cadence tile.
+     */
+    private fun applyTopRow(v: RemoteViews, s: ScreenState, top: TopRow, gaugeMode: Boolean, karoo: Boolean, free: Boolean) {
+        val cad = s.cadence?.takeIf { it > 0 }?.toString() ?: "--"
+        val hr = s.heartRate?.toString() ?: "--"
+        if (!gaugeMode) {
+            val heart = if (karoo) R.id.th_interval_karoo_10 else R.id.th_interval_7
+            when (top) {
+                TopRow.CADENCE -> {
+                    v.setViewVisibility(heart, View.GONE)
+                    v.setTextViewText(R.id.hr, "$cad rpm")
+                }
+                TopRow.TARGET -> if (!free) {
+                    v.setViewVisibility(heart, View.GONE)
+                    val land = s.landStep?.let { " \u2192 ${s.scaled(it.targetAt(0))}" } ?: ""
+                    v.setTextViewText(R.id.hr, context.getString(R.string.target) + " " + gaugeTargetText(s) + land)
+                    v.setTextViewText(R.id.target_label, context.getString(if (karoo) R.string.hr else R.string.heart_rate))
+                    v.setTextViewText(R.id.target, hr)
+                    v.setViewVisibility(R.id.target_next, View.GONE)
+                }
+                else -> Unit
+            }
+            return
+        }
+        // Gauge layouts: the top row is the target block.
+        if (top == TopRow.TARGET) return
+        v.setViewVisibility(R.id.target_block, View.VISIBLE)
+        v.setTextViewText(R.id.target_label, context.getString(if (top == TopRow.CADENCE) R.string.cadence else R.string.heart_rate))
+        v.setTextViewText(R.id.target, if (top == TopRow.CADENCE) cad else hr)
+        v.setViewVisibility(R.id.target_next, View.GONE)
+        if (!free) {
+            // The HR tile shows the target instead.
+            v.setViewVisibility(if (karoo) R.id.th_interval_gauge_karoo_3 else R.id.th_interval_gauge_1, View.GONE)
+            v.setTextViewText(R.id.hr_label, context.getString(R.string.target))
+            v.setTextViewText(R.id.hr, gaugeTargetText(s))
+        }
+    }
+
     private enum class RangeState { UNDER, IN, OVER }
 
     /**
@@ -460,7 +562,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
      * workout or ride paused, workout finished, or no power or target.
      */
     private fun rangeState(s: ScreenState): RangeState? {
-        if (s.finished || s.workoutPaused || s.paused) return null
+        if (s.finished || s.workoutPaused || s.paused || s.waiting) return null
         val p = s.power3s ?: return null
         val range = s.targetRange ?: return null
         return when {
@@ -491,11 +593,23 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         val cadence = s.cadence?.takeIf { it > 0 }
         if (cadence != null) freeCadSeen = true
         val lastLapTime = s.lastLapTimeSec?.takeIf { it > 0 }
-        lapText = (if (s.lapShowsNp) s.freeLapNp else s.lapPowerAvg)?.toString() ?: "--"
+        // Power tile: lap avg → lap NP → ride avg; HR tile (gauge): now → lap avg → ride avg.
+        lapText = when (s.freePowerTile) {
+            1 -> s.freeLapNp
+            2 -> s.rideAvgPower
+            else -> s.lapPowerAvg
+        }?.toString() ?: "--"
         targetText = s.lastLapPowerAvg?.takeIf { lastLapTime != null }?.toString() ?: "--"
-        hrText = s.shownHr?.toString() ?: "--"
+        val freeHr = when (s.freeHrTile) {
+            1 -> s.lapHrAvg
+            2 -> s.rideAvgHr
+            else -> s.heartRate
+        }
+        hrText = freeHr?.toString() ?: "--"
         cadText = cadence?.toString() ?: "--"
         cadTileShown = freeCadSeen
+        val top = topOf(s, gaugeMode, free = true)
+        if (top == TopRow.CADENCE) cadTileShown = false
         // The classic layouts' Target tile has nothing to show without a workout: hidden, so the
         // tiles are one fewer (the gauge layouts' tiles are Lap avg, HR and Cadence).
         lapHiddenForJump = !gaugeMode
@@ -540,7 +654,21 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             else listOf(R.id.icon_timer, R.id.icon_lap, R.id.icon_bolt, R.id.icon_target)
             icons.forEach { v.setInt(it, "setColorFilter", color(R.color.karoo_green)) }
         }
-        v.setTextViewText(R.id.hr, s.shownHr?.toString() ?: "--")
+        // Top HR (classic) shows the heart rate now; the gauge's HR tile goes through its values.
+        v.setTextViewText(R.id.hr, if (gaugeMode) hrText else s.heartRate?.toString() ?: "--")
+        if (gaugeMode) {
+            v.setTextViewText(
+                R.id.hr_label,
+                context.getString(
+                    when (s.freeHrTile) {
+                        1 -> R.string.lap_hr
+                        2 -> R.string.ride_hr
+                        else -> R.string.hr
+                    },
+                ),
+            )
+            v.setOnClickPendingIntent(R.id.hr_tile, freeHrIntent)
+        }
 
         // "Lap 3" and the lap time where the interval and its clock are; "Paused" while paused.
         if (s.paused) {
@@ -567,9 +695,18 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         v.setViewVisibility(R.id.tiles_row, View.VISIBLE)
         v.setViewVisibility(R.id.confirm_row, View.GONE)
         v.setViewVisibility(R.id.move_cancelled, View.GONE)
-        v.setTextViewText(R.id.lap_avg_label, context.getString(if (s.lapShowsNp) R.string.np else R.string.lap_avg))
+        v.setTextViewText(
+            R.id.lap_avg_label,
+            context.getString(
+                when (s.freePowerTile) {
+                    1 -> R.string.np
+                    2 -> R.string.ride_avg
+                    else -> R.string.lap_avg
+                },
+            ),
+        )
         v.setTextViewText(R.id.lap_avg, lapText)
-        v.setOnClickPendingIntent(R.id.lap_tile, lapNpToggleIntent)
+        v.setOnClickPendingIntent(R.id.lap_tile, freePowerIntent)
         v.setViewVisibility(R.id.lap_tile, View.VISIBLE)
         v.setViewVisibility(R.id.cad_tile, if (cadTileShown) View.VISIBLE else View.GONE)
         if (cadTileShown) {
@@ -588,6 +725,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         } else {
             v.setViewVisibility(R.id.target_tile, View.GONE)
         }
+
+        applyTopRow(v, s, top, gaugeMode, karoo, free = true)
 
         // Bottom: the power chart in the space of the next box (48 dp + 6 dp) and the profile.
         v.setViewVisibility(R.id.next_box, View.GONE)

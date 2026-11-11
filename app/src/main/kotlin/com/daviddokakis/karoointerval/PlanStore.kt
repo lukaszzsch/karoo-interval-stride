@@ -97,6 +97,38 @@ class PlanStore private constructor(context: Context) {
         _appearance.value = value
     }
 
+    private val _powerSmoothing = MutableStateFlow(
+        Smoothing.entries.firstOrNull { it.name == prefs.getString("power_smoothing", null) } ?: Smoothing.S3,
+    )
+    /** How the big watts are smoothed (instant / 3 / 5 / 10 s). */
+    val powerSmoothing: StateFlow<Smoothing> = _powerSmoothing
+
+    fun setPowerSmoothing(value: Smoothing) {
+        prefs.edit().putString("power_smoothing", value.name).apply()
+        _powerSmoothing.value = value
+    }
+
+    private val _topRow = MutableStateFlow(
+        TopRow.entries.firstOrNull { it.name == prefs.getString("top_row", null) } ?: TopRow.AUTO,
+    )
+    /** What the top row shows (heart rate, cadence, target, or the layout's own choice). */
+    val topRow: StateFlow<TopRow> = _topRow
+
+    fun setTopRow(value: TopRow) {
+        prefs.edit().putString("top_row", value.name).apply()
+        _topRow.value = value
+    }
+
+    /** Free ride: the power tile's value (0 lap avg, 1 lap NP, 2 ride avg), remembered. */
+    var freePowerTile: Int
+        get() = prefs.getInt("free_power_tile", if (lapShowsNp) 1 else 0)
+        set(value) = prefs.edit().putInt("free_power_tile", value).apply()
+
+    /** Free ride: the heart rate tile's value (0 now, 1 lap avg, 2 ride avg), remembered. */
+    var freeHrTile: Int
+        get() = prefs.getInt("free_hr_tile", if (hrShowsLap) 1 else 0)
+        set(value) = prefs.edit().putInt("free_hr_tile", value).apply()
+
     /** How the watts show the target range (remembered between rides). */
     var wattsMode: WattsMode
         get() {
