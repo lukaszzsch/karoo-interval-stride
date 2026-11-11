@@ -88,6 +88,10 @@ data class ScreenState(
     /** The whole ride's average power and heart rate (Karoo). */
     val rideAvgPower: Int? = null,
     val rideAvgHr: Int? = null,
+    /** The whole ride's NP, IF and TSS (Karoo, from the profile FTP). */
+    val rideNp: Int? = null,
+    val rideIf: Double? = null,
+    val rideTss: Int? = null,
     /** What the top row shows. */
     val topRow: TopRow = TopRow.AUTO,
     /** Tiles as an outline instead of a grey fill. */

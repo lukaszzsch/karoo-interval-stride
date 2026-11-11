@@ -153,7 +153,7 @@ class PlanStore private constructor(context: Context) {
         _topRow.value = value
     }
 
-    /** Free ride: the power tile's value (0 lap avg, 1 lap NP, 2 ride avg), remembered. */
+    /** Free ride: the power tile's value (0 lap avg, 1 lap NP, 2 ride avg, 3 ride NP, 4 IF, 5 TSS), remembered. */
     var freePowerTile: Int
         get() = prefs.getInt("free_power_tile", if (lapShowsNp) 1 else 0)
         set(value) = prefs.edit().putInt("free_power_tile", value).apply()

@@ -120,6 +120,13 @@ class WorkoutSession(
         }
         collectInt(DataType.Type.AVERAGE_POWER) { v -> _state.update { it.copy(rideAvgPower = v) } }
         collectInt(DataType.Type.AVERAGE_HR) { v -> _state.update { it.copy(rideAvgHr = v) } }
+        collectInt(DataType.Type.NORMALIZED_POWER) { v -> _state.update { it.copy(rideNp = v) } }
+        collectInt(DataType.Type.TRAINING_STRESS_SCORE) { v -> _state.update { it.copy(rideTss = v) } }
+        scope.launch {
+            karoo.streamDataFlow(DataType.Type.INTENSITY_FACTOR).collect { s ->
+                _state.update { it.copy(rideIf = s.single()?.takeIf { v -> v > 0 }) }
+            }
+        }
         scope.launch { store.topRow.collect { t -> _state.update { it.copy(topRow = t) } } }
         scope.launch {
             karoo.streamDataFlow(DataType.Type.HEART_RATE).collect { s ->
@@ -401,10 +408,10 @@ class WorkoutSession(
         }
     }
 
-    /** Free ride: tap on the power tile: lap avg → lap NP → ride avg. */
+    /** Free ride: tap on the power tile: lap avg → lap NP → ride avg → ride NP → IF → TSS. */
     fun toggleFreePower() {
         scope.launch {
-            val v = (_state.value.freePowerTile + 1) % 3
+            val v = (_state.value.freePowerTile + 1) % FREE_POWER_VALUES
             store.freePowerTile = v
             _state.update { it.copy(freePowerTile = v) }
         }
@@ -703,6 +710,8 @@ class WorkoutSession(
 
     companion object {
         const val COUNTDOWN_SECONDS = 5
+        /** Values the free-ride power tile goes through. */
+        private const val FREE_POWER_VALUES = 6
         /** Heart rate drift needs at least 20 minutes of power with heart rate (about 1 a second). */
         private const val MIN_DRIFT_SAMPLES = 20 * 60
         /** A choice made with a remote button confirms itself after this many seconds. */

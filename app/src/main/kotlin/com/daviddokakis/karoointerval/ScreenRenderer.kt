@@ -614,12 +614,16 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         val cadence = s.cadence?.takeIf { it > 0 }
         if (cadence != null) freeCadSeen = true
         val lastLapTime = s.lastLapTimeSec?.takeIf { it > 0 }
-        // Power tile: lap avg → lap NP → ride avg; HR tile (gauge): now → lap avg → ride avg.
+        // Power tile: lap avg → lap NP → ride avg → ride NP → ride IF → ride TSS;
+        // HR tile (gauge): now → lap avg → ride avg.
         lapText = when (s.freePowerTile) {
-            1 -> s.freeLapNp
-            2 -> s.rideAvgPower
-            else -> s.lapPowerAvg
-        }?.toString() ?: "--"
+            1 -> s.freeLapNp?.toString()
+            2 -> s.rideAvgPower?.toString()
+            3 -> s.rideNp?.toString()
+            4 -> s.rideIf?.let { String.format(java.util.Locale.forLanguageTag("pl"), "%.2f", it) }
+            5 -> s.rideTss?.toString()
+            else -> s.lapPowerAvg?.toString()
+        } ?: "--"
         targetText = s.lastLapPowerAvg?.takeIf { lastLapTime != null }?.toString() ?: "--"
         val freeHr = when (s.freeHrTile) {
             1 -> s.lapHrAvg
@@ -722,6 +726,9 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
                 when (s.freePowerTile) {
                     1 -> R.string.np
                     2 -> R.string.ride_avg
+                    3 -> R.string.ride_np
+                    4 -> R.string.ride_if
+                    5 -> R.string.ride_tss
                     else -> R.string.lap_avg
                 },
             ),
