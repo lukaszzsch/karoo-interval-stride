@@ -1265,6 +1265,21 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         return sp
     }
 
+    private val classicPaint = TextPaint(TextPaint.ANTI_ALIAS_FLAG).apply { typeface = Typeface.DEFAULT_BOLD }
+
+    /** Largest size up to 22sp at which [text] fits in a classic tile (8dp padding each side). */
+    private fun classicCellSp(text: String): Float {
+        val tiles = ((if (cadTileShown) 3f else 2f) - (if (lapHiddenForJump || leftTileGone) 1f else 0f) - (if (rightTileGone) 1f else 0f)).coerceAtLeast(1f)
+        val cellPx = ((config.viewSize.first - 16 * density) / tiles - 6 * density - 16 * density - 2 * density).coerceAtLeast(1f)
+        var sp = CLASSIC_CELL_SP
+        while (sp > 12f) {
+            classicPaint.textSize = sp * density * scale
+            if (classicPaint.measureText(text) <= cellPx) break
+            sp -= 1f
+        }
+        return sp
+    }
+
     private var lapText = ""
     private var targetText = ""
     private var hrText = ""
@@ -1300,12 +1315,14 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
                 listOf(R.id.hr to 20f, R.id.target to cellValueSp(targetText), R.id.target_label to 13f)
             }
         } else {
-            sizes += listOf(R.id.interval_label to 13f, R.id.time_left to 30f, R.id.lap_avg to 22f)
-            sizes += listOf(R.id.cad_value to 22f, R.id.cad_label to 11f)
+            // Tile values at 22sp, smaller when one doesn't fit its tile (a range like "193–215"
+            // next to the cadence tile).
+            sizes += listOf(R.id.interval_label to 13f, R.id.time_left to 30f, R.id.lap_avg to classicCellSp(lapText))
+            sizes += listOf(R.id.cad_value to classicCellSp(cadText), R.id.cad_label to 11f)
             sizes += if (gaugeMode) {
-                listOf(R.id.hr to 22f, R.id.hr_label to 11f, R.id.lap_avg_label to 11f, R.id.target_label to 11f, R.id.target to 18f, R.id.target_next to 14f)
+                listOf(R.id.hr to classicCellSp(hrText), R.id.hr_label to 11f, R.id.lap_avg_label to 11f, R.id.target_label to 11f, R.id.target to 18f, R.id.target_next to 14f)
             } else {
-                listOf(R.id.hr to 18f, R.id.target to 22f, R.id.target_next to 16f)
+                listOf(R.id.hr to 18f, R.id.target to classicCellSp(targetText), R.id.target_next to 16f)
             }
         }
         sizes.forEach { (id, sp) -> v.setTextViewTextSize(id, TypedValue.COMPLEX_UNIT_PX, sp * density * scale) }
@@ -1356,6 +1373,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         /** Free-ride power chart height (the workout profile is [CHART_DP]). */
         private const val FREE_CHART_DP = 96f
         private const val CELL_VALUE_SP = 28f
+        private const val CLASSIC_CELL_SP = 22f
         /** Height of the gauge's space on a full page without a route (measured), and how much a route takes. */
         private const val GAUGE_KAROO_DP = 128.7f   // 241 px on a Karoo 3 (162 px with a route)
         private const val GAUGE_REGULAR_DP = 119.2f  // 224 px on a Karoo 3 (145 px with a route)
