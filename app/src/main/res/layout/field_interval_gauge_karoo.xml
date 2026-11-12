@@ -681,6 +681,27 @@
             android:tint="@color/text" />
     </FrameLayout>
 
+    <!-- ⓘ (indoors): the whole workout so far fills the field; a tap anywhere closes it. Right
+         of the gear, the same 48dp touch area. -->
+    <FrameLayout
+        android:id="@+id/btn_info"
+        android:layout_width="44dp"
+        android:layout_height="48dp"
+        android:layout_gravity="top|start"
+        android:layout_marginStart="40dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/btn_info_icon"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_gravity="top|start"
+            android:layout_marginStart="4dp"
+            android:layout_marginTop="9dp"
+            android:contentDescription="@string/cd_info"
+            android:src="@drawable/ic_info" />
+    </FrameLayout>
+
     <FrameLayout
         android:id="@+id/btn_pause"
         android:layout_width="48dp"

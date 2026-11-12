@@ -59,6 +59,11 @@ class IntervalDataType(
                     s.selectProgress, s.moveCancelled, s.targetShowsRange, s.wattsMode, s.karooStyle, s.appearance, s.navigating, s.hrShowsLap, s.lapShowsNp,
                     s.autoConfirmLeft, s.finishArmed, s.finished, s.ergActive, s.intensityPct, s.clockShowsElapsed, s.freeChartSpan, s.waiting, s.summary, s.freePowerTile, s.freeHrTile, s.topRow, s.tileOutline, s.rideNp, s.rideIf, s.rideTss,
                     s.indoor, s.rideIdle, s.ergConnected, s.trainerOutdoor,
+                    s.infoOpen, s.leftTile, s.rightTile, s.leftTileIndex, s.rightTileIndex,
+                    // Each new second of the interval clock redraws as soon as the Karoo allows,
+                    // so the clock never skips one (redraws paced only by the 1 s timer could land
+                    // either side of a second). Not during a countdown: its numbers set the pace.
+                    if (s.plan != null && !s.waiting && s.countdown == null) s.elapsedInStepSec else -1,
                 )
                 val since = SystemClock.elapsedRealtime() - lastRender
                 val changed = key != shown
@@ -121,6 +126,12 @@ class IntervalDataType(
         val rideIdle: Boolean,
         val ergConnected: Boolean,
         val trainerOutdoor: Boolean,
+        val infoOpen: Boolean,
+        val leftTile: List<TileMetric>?,
+        val rightTile: List<TileMetric>?,
+        val leftTileIndex: Int,
+        val rightTileIndex: Int,
+        val elapsedSec: Int,
     )
 
     companion object {

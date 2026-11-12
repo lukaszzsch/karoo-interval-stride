@@ -183,23 +183,72 @@ class SetupActivity : AppearanceActivity() {
         }
     }
 
-    /** Today's intensity: "Intensywność 95%" with − / + in 1% steps (targets and ERG follow). */
-    private fun intensityRow(): LinearLayout {
+    /**
+     * Today's intensity: "Intensywność 95%" with − / + in 1% steps (targets and ERG follow), and
+     * under it what that means on the trainer: before START the first interval, while riding the
+     * current one, its watts as planned → at today's % ("Pierwszy interwał · 10:00 · 150 → 143 W").
+     */
+    private fun intensityRow(plan: WorkoutPlan): LinearLayout {
         val erg = ErgSettings.get(this)
         val value = text(getString(R.string.intensity_value, erg.intensity.value), 17f, bold = true)
+        val preview = text("", 13f, secondary = true).apply {
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        }
+        fun showPreview() {
+            preview.text = intensityPreview(plan, erg.intensity.value)
+            preview.visibility = if (preview.text.isNullOrEmpty()) View.GONE else View.VISIBLE
+        }
         fun change(by: Int) {
             erg.setIntensity(erg.intensity.value + by)
             value.text = getString(R.string.intensity_value, erg.intensity.value)
+            showPreview()
         }
+        showPreview()
         return LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
+            orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
                 .apply { topMargin = dp(8) }
-            addView(value, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-            addView(button("\u2212", primary = false) { change(-1) }, LinearLayout.LayoutParams(dp(64), LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(6) })
-            addView(button("+", primary = false) { change(+1) }, LinearLayout.LayoutParams(dp(64), LinearLayout.LayoutParams.WRAP_CONTENT))
+            addView(
+                LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                    addView(value, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                    addView(button("\u2212", primary = false) { change(-1) }, LinearLayout.LayoutParams(dp(64), LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(6) })
+                    addView(button("+", primary = false) { change(+1) }, LinearLayout.LayoutParams(dp(64), LinearLayout.LayoutParams.WRAP_CONTENT))
+                },
+            )
+            // Outlined, like the outline tiles: it describes, it isn't a button
+            addView(
+                preview.apply {
+                    background = android.graphics.drawable.GradientDrawable().apply {
+                        cornerRadius = dp(8).toFloat()
+                        setStroke(dp(1), getColor(R.color.text_secondary))
+                    }
+                    setPadding(dp(10), dp(6), dp(10), dp(6))
+                },
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) },
+            )
         }
+    }
+
+    /** "Pierwszy interwał · 10:00 · 150 → 143 W" (or "Teraz 5 / 14 · …" while riding), "" without a target. */
+    private fun intensityPreview(plan: WorkoutPlan, pct: Int): String {
+        val st = IntervalExtension.session?.state?.value?.takeIf { it.plan?.id == plan.id }
+        val running = st != null && !st.waiting && !st.finished
+        val index = if (running) st!!.stepIndex else 0
+        val step = plan.steps.getOrNull(index)?.takeIf { it.hasTarget } ?: return ""
+        fun at(w: Int) = if (pct == 100) w else Math.round(w * pct / 100f)
+        fun watts(scale: Boolean): String = when {
+            step.isRamp -> "${if (scale) at(step.startWatts) else step.startWatts}\u2013${if (scale) at(step.endWatts) else step.endWatts}"
+            step.isRange && step.rangeLow != null && step.rangeHigh != null ->
+                "${if (scale) at(minOf(step.rangeLow, step.rangeHigh)) else minOf(step.rangeLow, step.rangeHigh)}\u2013${if (scale) at(maxOf(step.rangeLow, step.rangeHigh)) else maxOf(step.rangeLow, step.rangeHigh)}"
+            else -> "${if (scale) at(step.avgWatts) else step.avgWatts}"
+        }
+        // The unit once; only the watts at 100%.
+        val w = if (pct == 100) "${watts(false)} W" else "${watts(false)} \u2192 ${watts(true)} W"
+        val where = if (running) getString(R.string.preview_now, index + 1, plan.steps.size) else getString(R.string.preview_first)
+        return listOf(where, formatClock(step.durationSec), w).joinToString(" \u00b7 ")
     }
 
     /** "ERG w tej jeździe": Wł. / Swobodnie (trainer free, ride the targets yourself) until the ride ends. */
@@ -270,7 +319,7 @@ class SetupActivity : AppearanceActivity() {
         } else {
             val currentWorkout = week.firstOrNull { it.plan.id == current.id }
             content.addView(
-                card(current, currentWorkout?.date, selected = false, onClick = null).apply {
+                card(current, currentWorkout?.date, selected = false, onClick = { openDetails(current, currentWorkout?.date) }).apply {
                     addView(
                         button(getString(R.string.stop_workout), primary = false) {
                             store.clearSelection()
@@ -282,7 +331,7 @@ class SetupActivity : AppearanceActivity() {
                     ErgSettings.get(this@SetupActivity).let { erg ->
                         if (erg.usableNow) {
                             addView(ergThisRideRows(erg))
-                            addView(intensityRow())
+                            addView(intensityRow(current))
                         }
                     }
                 },
@@ -326,10 +375,8 @@ class SetupActivity : AppearanceActivity() {
             )
             workouts.forEach { w ->
                 content.addView(
-                    card(w.plan, w.date, selected = w.plan.id == current?.id) {
-                        store.select(w)
-                        goToRide()
-                    },
+                    // A tap opens the workout's details; "Wybierz trening" there picks it.
+                    card(w.plan, w.date, selected = w.plan.id == current?.id) { openDetails(w.plan, w.date) },
                 )
             }
         }
@@ -345,6 +392,24 @@ class SetupActivity : AppearanceActivity() {
                 }.apply { (layoutParams as LinearLayout.LayoutParams).topMargin = dp(12) },
             )
         }
+    }
+
+    private fun openDetails(plan: WorkoutPlan, date: LocalDate?) {
+        @Suppress("DEPRECATION")
+        startActivityForResult(
+            Intent(this, WorkoutDetailsActivity::class.java)
+                .putExtra(WorkoutDetailsActivity.EXTRA_ID, plan.id)
+                .putExtra(WorkoutDetailsActivity.EXTRA_DATE, date?.toString()),
+            REQUEST_DETAILS,
+        )
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
+        // "Wybierz trening" on the details page: back to the ride, as a tap on the card used to.
+        if (requestCode == REQUEST_DETAILS && resultCode == RESULT_OK) goToRide()
     }
 
     /**
@@ -367,7 +432,24 @@ class SetupActivity : AppearanceActivity() {
             setBackgroundResource(R.drawable.bg_tile)
             setPadding(dp(10), dp(8), dp(10), dp(10))
             layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { bottomMargin = dp(8) }
-            addView(text(plan.name, 16f, bold = true).apply { setPadding(0, 0, 0, dp(6)) })
+            // Name, and a › on cards that open their details
+            addView(
+                LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    addView(text(plan.name, 16f, bold = true).apply { setPadding(0, 0, 0, dp(6)) }, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+                    if (onClick != null) {
+                        addView(
+                            ImageView(context).apply {
+                                setImageResource(R.drawable.ic_chevron)
+                                setColorFilter(getColor(R.color.text_secondary))
+                                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                            },
+                            LinearLayout.LayoutParams(dp(18), dp(18)).apply { bottomMargin = dp(6) },
+                        )
+                    }
+                },
+            )
             addView(thumbnail(plan))
             val dateText = date?.let { if (it == LocalDate.now()) getString(R.string.today) else it.format(DAY_FORMAT) }
             val details = listOfNotNull(formatClock(plan.totalSec), dateText).joinToString(" · ")
@@ -403,6 +485,7 @@ class SetupActivity : AppearanceActivity() {
     companion object {
         /** Set when opened from the gear button on the interval screen. */
         const val EXTRA_FROM_RIDE = "from_ride"
+        private const val REQUEST_DETAILS = 41
         private const val RIDE_APP = "io.hammerhead.rideapp"
         private const val WIFI_SETTLE_MS = 2_000L
         /** Day names in Polish, whatever the Karoo's language (this build's UI is Polish). */

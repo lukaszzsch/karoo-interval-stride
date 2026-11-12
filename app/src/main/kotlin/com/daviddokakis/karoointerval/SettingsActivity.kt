@@ -7,6 +7,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -47,6 +48,42 @@ class SettingsActivity : AppearanceActivity() {
     override fun onResume() {
         super.onResume()
         render() // the account row shows whether a key is set
+    }
+
+    /**
+     * One switch per metric. Never set, the tile works as it always did (shown ticked as such);
+     * the first change makes it the rider's own list, "Przywróć domyślne" goes back.
+     */
+    private fun tileSection(title: Int, help: Int, value: List<TileMetric>?, default: List<TileMetric>, set: (List<TileMetric>?) -> Unit) {
+        form.addView(settingsHeading(R.drawable.ic_style, getString(title)))
+        val on = value ?: default
+        TileMetric.entries.forEach { m ->
+            form.addView(
+                CheckBox(this).apply {
+                    text = getString(m.setting)
+                    setTextColor(getColor(R.color.text))
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+                    buttonTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.watts_in_range))
+                    minHeight = dp(44)
+                    isChecked = m in on
+                    setOnCheckedChangeListener { _, checked ->
+                        val now = on.toMutableSet().apply { if (checked) add(m) else remove(m) }
+                        set(TileMetric.entries.filter { it in now })
+                        form.post { render() }
+                    }
+                },
+            )
+        }
+        if (value != null) {
+            form.addView(
+                button(getString(R.string.tiles_reset), primary = false) {
+                    set(null)
+                    render()
+                }.apply { (layoutParams as LinearLayout.LayoutParams).topMargin = dp(6) },
+            )
+        }
+        form.addView(settingsHelp(getString(help)))
+        form.addView(settingsDivider())
     }
 
     private fun render() {
@@ -101,6 +138,10 @@ class SettingsActivity : AppearanceActivity() {
         )
         form.addView(settingsHelp(getString(R.string.tiles_style_help)))
         form.addView(settingsDivider())
+
+        // Left and right tile of the workout screen: which metrics each goes through (a tap shows the next)
+        tileSection(R.string.left_tile, R.string.left_tile_help, store.leftTile.value, TileMetric.LEFT_DEFAULT) { store.setLeftTile(it) }
+        tileSection(R.string.right_tile, R.string.right_tile_help, store.rightTile.value, TileMetric.RIGHT_DEFAULT) { store.setRightTile(it) }
 
         // Update notices: Off / On
         form.addView(settingsHeading(R.drawable.ic_interval, getString(R.string.update_notices)))

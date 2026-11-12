@@ -59,6 +59,12 @@
             </intent-filter>
         </activity>
 
+        <!-- A workout's details: picture, numbers, zones, intervals (a tap on its card) -->
+        <activity
+            android:name=".WorkoutDetailsActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme" />
+
         <activity
             android:name=".TrainerActivity"
             android:exported="false"

@@ -49,6 +49,9 @@ class ChartRenderer(private val context: Context) {
         if (plan.steps.isEmpty() || plan.totalSec <= 0) return bmp
 
         val d = context.resources.displayMetrics.density * scale
+        // The graph's colours with extra contrast against the page (+15 %: the Karoo's screen is pale)
+        val night = Zones.isNight(context)
+        fun contrast(c: Int): Int = Zones.boosted(c, night)
         // The step a jump lands on and its ▼: blue, or the Karoo's jump purple in Karoo style.
         val landColor = if (state.karooStyle) R.color.karoo_purple else R.color.land
         val label = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -126,16 +129,28 @@ class ChartRenderer(private val context: Context) {
             }
             // The Karoo's 6 power zones and colours (zones from the rider profile, else the
             // Karoo's default split of the FTP), as on the Karoo's own power zone pages.
-            val bar = karooBar(step.avgWatts, state.powerZones, state.profileFtp ?: ftp)
+            val zoneFtp = state.profileFtp ?: ftp
+            val bar = karooBar(step.avgWatts, state.powerZones, zoneFtp)
+            // A ramp fades from its start zone's colour to its end zone's.
+            val fillA = contrast(color(if (step.isRamp) karooBar(step.startWatts, state.powerZones, zoneFtp).fill else bar.fill))
+            val fillB = if (step.isRamp) contrast(color(karooBar(step.endWatts, state.powerZones, zoneFtp).fill)) else fillA
+            fun paintWith(a: Int, b: Int) {
+                if (a == b) {
+                    fill.shader = null
+                    fill.color = a
+                } else {
+                    fill.shader = android.graphics.LinearGradient(x0, 0f, x1, 0f, a, b, android.graphics.Shader.TileMode.CLAMP)
+                }
+            }
             // Everything already ridden is whitened (its zone colour 60% toward white): finished
             // steps whole, the current step up to the "now" marker. The jump target is solid blue.
             val done = !card && i < state.stepIndex
             val isTarget = !card && i == state.landTarget
             val alpha = 255
-            fill.color = when {
-                isTarget -> color(landColor)
-                done -> whitened(color(bar.fill))
-                else -> color(bar.fill)
+            when {
+                isTarget -> paintWith(color(landColor), color(landColor))
+                done -> paintWith(whitened(fillA), whitened(fillB))
+                else -> paintWith(fillA, fillB)
             }
             canvas.drawPath(path, fill)
             if (!card && !isTarget && i == state.stepIndex) {
@@ -143,11 +158,12 @@ class ChartRenderer(private val context: Context) {
                 if (nx > x0) {
                     canvas.save()
                     canvas.clipRect(x0, 0f, nx, bottom)
-                    fill.color = whitened(color(bar.fill))
+                    paintWith(whitened(fillA), whitened(fillB))
                     canvas.drawPath(path, fill)
                     canvas.restore()
                 }
             }
+            fill.shader = null
             bar.edge?.let { edge ->
                 // Karoo draws easy bars with a bright outline, just inside the bar.
                 val inset = edgePaint.strokeWidth / 2

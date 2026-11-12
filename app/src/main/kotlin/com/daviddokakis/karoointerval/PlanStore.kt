@@ -153,6 +153,34 @@ class PlanStore private constructor(context: Context) {
         _topRow.value = value
     }
 
+    private val _leftTile = MutableStateFlow(TileMetric.parse(prefs.getString("left_tile", null)))
+    private val _rightTile = MutableStateFlow(TileMetric.parse(prefs.getString("right_tile", null)))
+    /**
+     * Settings › Lewy / Prawy kafelek: the metrics each workout-screen tile goes through, one per
+     * tap (an empty list: the tile is left out). Null: never set, the tile works as it always did.
+     */
+    val leftTile: StateFlow<List<TileMetric>?> = _leftTile
+    val rightTile: StateFlow<List<TileMetric>?> = _rightTile
+
+    fun setLeftTile(value: List<TileMetric>?) {
+        prefs.edit().apply { if (value == null) remove("left_tile") else putString("left_tile", TileMetric.format(value)) }.apply()
+        _leftTile.value = value
+    }
+
+    fun setRightTile(value: List<TileMetric>?) {
+        prefs.edit().apply { if (value == null) remove("right_tile") else putString("right_tile", TileMetric.format(value)) }.apply()
+        _rightTile.value = value
+    }
+
+    /** Which metric each tile shows now (remembered between rides). */
+    var leftTileIndex: Int
+        get() = prefs.getInt("left_tile_index", 0)
+        set(value) = prefs.edit().putInt("left_tile_index", value).apply()
+
+    var rightTileIndex: Int
+        get() = prefs.getInt("right_tile_index", 0)
+        set(value) = prefs.edit().putInt("right_tile_index", value).apply()
+
     /** Free ride: the power tile's value (0 lap avg, 1 lap NP, 2 ride avg, 3 ride NP, 4 IF, 5 TSS), remembered. */
     var freePowerTile: Int
         get() = prefs.getInt("free_power_tile", if (lapShowsNp) 1 else 0)

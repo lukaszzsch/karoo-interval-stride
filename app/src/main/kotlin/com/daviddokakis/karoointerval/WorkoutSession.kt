@@ -66,6 +66,13 @@ class WorkoutSession(
     private var autoConfirmJob: Job? = null
     private var moveCancelledJob: Job? = null
     private var started = false
+    /** A changed version of the running workout from a sync mid-ride: loads when the ride ends. */
+    private var heldPlan: WorkoutPlan? = null
+    /**
+     * The Karoo ride started together with the workout's start countdown (▶ or the Karoo's start
+     * button on a trainer profile): no lap of its own for the countdown's 5 s then.
+     */
+    private var rideStartsWithWorkout = false
 
     /** Interval screens currently showing. While one is, it plays the countdown beeps (see [onCountdownShown]). */
     private val viewsActive = java.util.concurrent.atomic.AtomicInteger(0)
@@ -146,6 +153,7 @@ class WorkoutSession(
                 val st = _state.value
                 if (wasIdle == true && recording && st.indoor && st.plan != null && st.waiting && countdownJob?.isActive != true) {
                     Timber.i("Ride started on a trainer profile: the workout starts with it")
+                    rideStartsWithWorkout = true
                     startCountdown(st.stepIndex)
                 }
                 wasIdle = ride is RideState.Idle
@@ -154,6 +162,12 @@ class WorkoutSession(
                 if (ride is RideState.Idle) {
                     resetToStart()
                     PowerHistory.clear()
+                    // A changed version of the workout that came in mid-ride loads now.
+                    heldPlan?.let { newer ->
+                        heldPlan = null
+                        Timber.i("Ride over: loading the changed version of ${newer.name}")
+                        loadPlan(newer)
+                    }
                 }
             }
         }
@@ -171,6 +185,7 @@ class WorkoutSession(
                         profileFtp = profile.ftp.takeIf { ftp -> ftp > 0 },
                         hrZones = profile.heartRateZones.map { z -> z.min..z.max },
                         powerZones = profile.powerZones.map { z -> z.min..z.max },
+                        imperial = profile.preferredUnit.distance == UserProfile.PreferredUnit.UnitType.IMPERIAL,
                     )
                 }
             }
@@ -195,13 +210,31 @@ class WorkoutSession(
             }
         }
         scope.launch { store.tileOutline.collect { on -> _state.update { it.copy(tileOutline = on) } } }
+        collectInt(DataType.Type.CALORIES) { v -> _state.update { it.copy(calories = v) } }
         scope.launch {
-            store.plan.collect { plan -> loadPlan(plan) }
+            karoo.streamDataFlow(DataType.Type.SPEED).collect { s -> _state.update { it.copy(speedMs = s.single()) } }
+        }
+        scope.launch { store.leftTile.collect { t -> _state.update { it.copy(leftTile = t) } } }
+        scope.launch { store.rightTile.collect { t -> _state.update { it.copy(rightTile = t) } } }
+        scope.launch {
+            store.plan.collect { plan ->
+                // The running workout changed on Stride (a sync on the Workouts page mid-ride):
+                // keep riding the version that's running (its time, averages and summary carry
+                // on); the new one loads when the ride ends.
+                val st = _state.value
+                if (plan != null && st.plan?.id == plan.id && !st.rideIdle && !st.waiting && !st.finished) {
+                    Timber.i("Workout ${plan.name} changed on Stride: the running version carries on until the ride ends")
+                    heldPlan = plan
+                    return@collect
+                }
+                heldPlan = null
+                loadPlan(plan)
+            }
         }
         scope.launch { tickLoop() }
         scope.launch { store.karooStyle.collect { on -> _state.update { it.copy(karooStyle = on) } } }
         scope.launch { store.appearance.collect { a -> _state.update { it.copy(appearance = a) } } }
-        _state.update { it.copy(wattsMode = store.wattsMode, targetShowsRange = store.targetShowsRange, lapShowsNp = store.lapShowsNp, hrShowsLap = store.hrShowsLap, clockShowsElapsed = store.clockShowsElapsed, freeChartSpan = store.freeChartSpan, freePowerTile = store.freePowerTile, freeHrTile = store.freeHrTile) }
+        _state.update { it.copy(wattsMode = store.wattsMode, targetShowsRange = store.targetShowsRange, lapShowsNp = store.lapShowsNp, hrShowsLap = store.hrShowsLap, clockShowsElapsed = store.clockShowsElapsed, freeChartSpan = store.freeChartSpan, freePowerTile = store.freePowerTile, freeHrTile = store.freeHrTile, leftTileIndex = store.leftTileIndex, rightTileIndex = store.rightTileIndex) }
     }
 
     /** Today's intensity in % (targets and ERG follow it). */
@@ -435,6 +468,32 @@ class WorkoutSession(
         }
     }
 
+    /** Tap on a tile set in Settings: its next metric. */
+    fun cycleTile(left: Boolean) {
+        scope.launch {
+            val st = _state.value
+            val list = (if (left) st.leftTile else st.rightTile) ?: return@launch
+            if (list.size < 2) return@launch
+            if (left) {
+                val i = (st.leftTileIndex + 1) % list.size
+                store.leftTileIndex = i
+                _state.update { it.copy(leftTileIndex = i) }
+            } else {
+                val i = (st.rightTileIndex + 1) % list.size
+                store.rightTileIndex = i
+                _state.update { it.copy(rightTileIndex = i) }
+            }
+        }
+    }
+
+    /** ⓘ: open or close the whole workout so far. */
+    fun toggleInfo() {
+        scope.launch {
+            val open = !_state.value.infoOpen
+            _state.update { it.copy(infoOpen = open, live = if (open) liveNow() else it.live) }
+        }
+    }
+
     /** Free ride: tap on the power tile: lap avg → lap NP → ride avg → ride NP → IF → TSS. */
     fun toggleFreePower() {
         scope.launch {
@@ -500,6 +559,7 @@ class WorkoutSession(
                     // that button would pause or resume it instead).
                     if (_state.value.indoor && _state.value.rideIdle) {
                         Timber.i("Starting the Karoo ride with the workout")
+                        rideStartsWithWorkout = true
                         karoo.dispatch(PerformHardwareAction.BottomRightPress)
                     }
                     startCountdown(_state.value.stepIndex)
@@ -553,6 +613,12 @@ class WorkoutSession(
             val dt = now - lastTick
             lastTick = now
             val st = _state.value
+            // ⓘ open: its numbers about once a second
+            sinceLive += dt
+            if (st.infoOpen && sinceLive >= 1000) {
+                sinceLive = 0
+                _state.update { it.copy(live = liveNow()) }
+            }
             val step = st.currentStep ?: continue
             if (!recording || st.finished || st.workoutPaused || st.waiting) continue
             workoutMs += dt
@@ -603,7 +669,10 @@ class WorkoutSession(
         resetLap()
         resetTotals()
         _state.update { it.copy(waiting = false, countdown = null, jumpTarget = null, elapsedInStepSec = 0) }
-        karoo.dispatch(MarkLap)
+        // The first interval gets its own lap, except when the ride started with this countdown:
+        // then the countdown's 5 s would be a lap of their own (they count in the first interval's).
+        if (!rideStartsWithWorkout) karoo.dispatch(MarkLap)
+        rideStartsWithWorkout = false
         // A short rising tune.
         karoo.dispatch(PlayBeepPattern(listOf(PlayBeepPattern.Tone(1000, 120), PlayBeepPattern.Tone(null, 60), PlayBeepPattern.Tone(1500, 120), PlayBeepPattern.Tone(null, 60), PlayBeepPattern.Tone(2000, 250))))
         saveProgress()
@@ -616,6 +685,12 @@ class WorkoutSession(
     }
 
     private var workoutMs = 0L
+    private var cadSum = 0.0
+    private var cadSamples = 0
+    private var maxPower = 0
+    /** The ride's calories when the workout started (its own calories are what's added since). */
+    private var caloriesAtStart: Int? = null
+    private var sinceLive = 0L
     private var powerSum = 0.0
     private var powerSamples = 0
     private var hrSum = 0.0
@@ -625,6 +700,10 @@ class WorkoutSession(
 
     private fun resetTotals() {
         workoutMs = 0
+        cadSum = 0.0
+        cadSamples = 0
+        maxPower = 0
+        caloriesAtStart = _state.value.calories
         powerSum = 0.0
         powerSamples = 0
         hrSum = 0.0
@@ -649,6 +728,17 @@ class WorkoutSession(
         val second = ratio(driftSamples.subList(half, driftSamples.size)) ?: return null
         return (first - second) / first * 100.0
     }
+
+    /** The workout so far (ⓘ). */
+    private fun liveNow() = WorkoutLive(
+        timeSec = (workoutMs / 1000).toInt(),
+        avgPower = if (powerSamples > 0) (powerSum / powerSamples).roundToInt() else null,
+        np = workoutNp.value,
+        avgHr = if (hrSamples > 0) (hrSum / hrSamples).roundToInt() else null,
+        avgCadence = if (cadSamples > 0) (cadSum / cadSamples).roundToInt() else null,
+        maxPower = maxPower.takeIf { it > 0 },
+        calories = _state.value.calories?.let { now -> (now - (caloriesAtStart ?: now)).coerceAtLeast(0) },
+    )
 
     private fun summaryNow() = WorkoutSummary(
         timeSec = (workoutMs / 1000).toInt(),
@@ -685,6 +775,8 @@ class WorkoutSession(
     }
 
     private fun cancelCountdown() {
+        // A start countdown called off: the next START gets its lap again.
+        if (_state.value.waiting) rideStartsWithWorkout = false
         countdownJob?.cancel()
         countdownJob = null
         _state.update { it.copy(countdown = null, jumpTarget = null) }
@@ -705,6 +797,8 @@ class WorkoutSession(
             st.heartRate?.takeIf { it > 0 }?.let { hr -> driftSamples.add(watts.toFloat() to hr.toFloat()) }
             powerSum += watts
             powerSamples++
+            maxPower = maxOf(maxPower, watts.roundToInt())
+            st.cadence?.takeIf { it > 0 }?.let { c -> cadSum += c; cadSamples++ }
             workoutNp.add(SystemClock.elapsedRealtime(), watts)
         }
         if (watts != null && recording && st.workoutLoaded && !st.finished) {
@@ -754,7 +848,7 @@ class WorkoutSession(
         private const val SELECT_TIMEOUT_MS = 10_000L
         /** How long "Move cancelled" shows. */
         private const val MOVE_CANCELLED_MS = 3_000L
-        private const val TICK_MS = 250L
+        private const val TICK_MS = 100L
         private const val SAVE_EVERY_MS = 15_000L
 
         private val TICK_TONE = PlayBeepPattern.Tone(frequency = 2000, durationMs = 100)

@@ -97,6 +97,9 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     private val freePowerIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_FREE_POWER, 18) }
     private val freeHrIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_FREE_HR, 19) }
     private val wattsColorIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_WATTS_COLOR, 7) }
+    private val leftTileIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_LEFT_TILE, 20) }
+    private val rightTileIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_RIGHT_TILE, 21) }
+    private val infoIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_INFO, 22) }
     private val rateIntent: PendingIntent by lazy {
         PendingIntent.getActivity(
             context,
@@ -121,6 +124,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         val s = DemoData.apply(state)
         useAppearance(s.appearance)
         if (s.plan == null) return renderFreeRide(s)
+        if (s.infoOpen) return renderInfo(s, s.plan)
         // The Gauge watts mode has its own layout; the other four share the classic one. Each has
         // a "Karoo native styling" twin (setting on the Account page).
         val gaugeMode = s.wattsMode == WattsMode.GAUGE
@@ -135,7 +139,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         applyAppearance(v, layout)
         // The cell values' texts, so a Karoo-style cell can shrink a value that's too wide.
         lapText = (if (s.lapShowsNp) s.lapNp else s.lapAvg)?.toString() ?: "--"
-        targetText = s.targetRange.let { band ->
+        targetText = s.shownRange.let { band ->
             if (s.targetShowsRange && band != null) "${band.first}–${band.last}" else s.target?.toString() ?: "--"
         }
         hrText = s.heartRate?.toString() ?: "--"
@@ -148,12 +152,26 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         val top = topOf(s, gaugeMode, free = false)
         if (top == TopRow.CADENCE) cadTileShown = false
         if (gaugeMode && top != TopRow.TARGET) hrText = gaugeTargetText(s) // the HR tile shows the target
+        // Tiles set in Settings › Lewy / Prawy kafelek (null: never set, as above)
+        val leftShow = tileShow(s, s.leftTile, s.leftTileIndex, karoo)
+        val rightShow = tileShow(s, s.rightTile, s.rightTileIndex, karoo)
+        leftShow?.let { lapText = it.value }
+        rightShow?.let { if (gaugeMode) hrText = it.value else targetText = it.value }
+        leftTileGone = leftShow === TileShow.HIDDEN
+        rightTileGone = rightShow === TileShow.HIDDEN
+        // Every tile left out: no tile row, the watts (or the gauge) take its room.
+        val tilesRowGone = leftTileGone && rightTileGone && !cadTileShown
         applyTextSizes(v, gaugeMode, karoo)
 
         v.setViewVisibility(R.id.content, View.VISIBLE)
         v.setViewVisibility(R.id.btn_settings, View.VISIBLE)
         v.setViewVisibility(R.id.btn_pause, View.VISIBLE)
         v.setOnClickPendingIntent(R.id.btn_settings, settingsIntent)
+        // ⓘ indoors: the whole workout so far
+        v.setViewVisibility(R.id.btn_info, if (s.indoor) View.VISIBLE else View.GONE)
+        v.setInt(R.id.btn_info_icon, "setColorFilter", color(R.color.text))
+        v.setInt(R.id.btn_info_icon, "setImageAlpha", ICON_ALPHA)
+        v.setOnClickPendingIntent(R.id.btn_info, infoIntent)
 
         // 3 s average power. Tap to cycle how the target range shows: plain, coloured number,
         // coloured background behind the top of the screen, both, or the power gauge.
@@ -170,7 +188,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         if (gaugeMode) {
             val gaugeW = (config.viewSize.first - 16 * density).toInt()
             if (gaugeW > 0) {
-                v.setImageViewBitmap(R.id.gauge, gauge.render(gaugeW, gaugeHeightPx(karoo, s.navigating), s.power3s, s.target, s.targetRange, color(wattsColor), karoo))
+                val extra = if (tilesRowGone) ((if (karoo) 54 else 52) * density * scale).toInt() else 0
+                v.setImageViewBitmap(R.id.gauge, gauge.render(gaugeW, gaugeHeightPx(karoo, s.navigating) + extra, s.power3s, s.target, s.targetRange, color(wattsColor), karoo))
             }
         } else {
             v.setTextViewText(R.id.watts, s.power3s?.toString() ?: "--")
@@ -325,12 +344,13 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             v.setTextColor(R.id.cad_value, color(cadColor))
             v.setTextColor(R.id.cad_label, labelColor)
         }
-        val band = s.targetRange
+        // A fixed-watts interval shows its watts (what ERG holds), never the tolerance band around them.
+        val band = s.shownRange
         if (gaugeMode) {
             // Target (top row): the range, or the target when the step has no range.
             v.setTextViewText(
                 R.id.target,
-                if (band != null && band.first != band.last) "${band.first} – ${band.last}" else s.target?.toString() ?: "--",
+                if (band != null) "${band.first} – ${band.last}" else s.target?.toString() ?: "--",
             )
         } else {
             // Target tile: tap to switch between the target and the target range.
@@ -506,6 +526,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         applyTopRow(v, s, top, gaugeMode, karoo, free = false)
         if (s.waiting && s.ergConnected) showErgReady(v, s, top, gaugeMode, karoo)
         applyTileStyle(v, s, gaugeMode)
+        applyCustomTiles(v, s, leftShow, rightShow, gaugeMode, karoo, labelColor)
+        if (tilesRowGone) v.setViewVisibility(R.id.tiles_row, View.GONE)
 
         // Chart
         val chartW = (config.viewSize.first - 16 * density).toInt()
@@ -531,8 +553,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
 
     /** The target as the gauge's top row writes it: "161 – 189", or the single target. */
     private fun gaugeTargetText(s: ScreenState): String {
-        val band = s.targetRange
-        return if (band != null && band.first != band.last) "${band.first} – ${band.last}" else s.target?.toString() ?: "--"
+        val band = s.shownRange
+        return if (band != null) "${band.first} – ${band.last}" else s.target?.toString() ?: "--"
     }
 
     /**
@@ -598,6 +620,205 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         }
         v.setTextViewText(id, label)
         v.setTextColor(id, color(R.color.watts_in_range))
+    }
+
+    /** What a tile set in Settings shows now; [HIDDEN] for a tile switched off. */
+    private class TileShow(val metric: TileMetric?, val label: String, val value: String) {
+        companion object {
+            val HIDDEN = TileShow(null, "", "")
+        }
+    }
+
+    /** A tile set in Settings: null when it never was (it works as before). */
+    private fun tileShow(s: ScreenState, list: List<TileMetric>?, index: Int, karoo: Boolean): TileShow? {
+        if (list == null) return null
+        if (list.isEmpty()) return TileShow.HIDDEN
+        val m = list[Math.floorMod(index, list.size)]
+        return TileShow(m, metricLabel(s, m, karoo), metricValue(s, m))
+    }
+
+    private fun metricValue(s: ScreenState, m: TileMetric): String = when (m) {
+        TileMetric.LAP_AVG -> s.lapAvg?.toString()
+        TileMetric.LAP_NP -> s.lapNp?.toString()
+        TileMetric.RIDE_AVG -> s.rideAvgPower?.toString()
+        TileMetric.TARGET -> s.target?.toString()
+        TileMetric.TARGET_RANGE -> s.shownRange?.let { "${it.first}\u2013${it.last}" } ?: s.target?.toString()
+        TileMetric.HEART_RATE -> s.heartRate?.toString()
+        TileMetric.CADENCE -> s.cadence?.takeIf { it > 0 }?.toString()
+        TileMetric.CALORIES -> s.calories?.toString()
+        TileMetric.SPEED -> s.speedMs?.let { String.format(java.util.Locale.forLanguageTag("pl"), "%.1f", it * if (s.imperial) 2.236936 else 3.6) }
+    } ?: "--"
+
+    private fun metricLabel(s: ScreenState, m: TileMetric, karoo: Boolean): String {
+        if (m.isTarget) {
+            // The trainer holds this target in ERG; a changed intensity shows as "95%".
+            val pct = if (s.intensityPct != 100) " ${s.intensityPct}%" else ""
+            return when {
+                s.waiting && s.ergConnected -> context.getString(R.string.erg_ready) + pct
+                s.ergActive -> context.getString(R.string.target_erg) + pct
+                // Karoo style: "ZAKRES CELU" doesn't fit at its label size; the value shows it's a range.
+                m == TileMetric.TARGET_RANGE && karoo -> context.getString(R.string.target) + pct
+                else -> context.getString(m.label) + pct
+            }
+        }
+        return when (m) {
+            TileMetric.SPEED -> if (s.imperial) "mph" else "km/h"
+            TileMetric.CALORIES -> "kcal"
+            else -> context.getString(m.label)
+        }
+    }
+
+    /** Puts the tiles set in Settings in place of what the layout shows there (or leaves them out). */
+    private fun applyCustomTiles(v: RemoteViews, s: ScreenState, left: TileShow?, right: TileShow?, gaugeMode: Boolean, karoo: Boolean, labelColor: Int) {
+        fun labelColorFor(t: TileShow) = if (t.metric?.isTarget == true && s.waiting && s.ergConnected) color(R.color.watts_in_range) else labelColor
+        left?.let { t ->
+            val m = t.metric
+            if (m == null) {
+                v.setViewVisibility(R.id.lap_tile, View.GONE)
+            } else {
+                v.setTextViewText(R.id.lap_avg_label, t.label)
+                v.setTextColor(R.id.lap_avg_label, labelColorFor(t))
+                v.setTextViewText(R.id.lap_avg, t.value)
+                v.setOnClickPendingIntent(R.id.lap_tile, leftTileIntent)
+                // The lap icon only over power numbers
+                if (karoo) v.setViewVisibility(R.id.icon_lap, if (m == TileMetric.LAP_AVG || m == TileMetric.LAP_NP || m == TileMetric.RIDE_AVG) View.VISIBLE else View.GONE)
+            }
+        }
+        right?.let { t ->
+            val m = t.metric
+            val tile = if (gaugeMode) R.id.hr_tile else R.id.target_tile
+            if (m == null) {
+                v.setViewVisibility(tile, View.GONE)
+                return@let
+            }
+            val labelId = if (gaugeMode) R.id.hr_label else R.id.target_label
+            val valueId = if (gaugeMode) R.id.hr else R.id.target
+            v.setViewVisibility(tile, View.VISIBLE)
+            v.setTextViewText(labelId, t.label)
+            v.setTextColor(labelId, labelColorFor(t))
+            v.setTextViewText(valueId, t.value)
+            v.setOnClickPendingIntent(tile, rightTileIntent)
+            if (gaugeMode) {
+                v.setViewVisibility(if (karoo) R.id.th_interval_gauge_karoo_3 else R.id.th_interval_gauge_1, if (m == TileMetric.HEART_RATE) View.VISIBLE else View.GONE)
+            } else {
+                if (karoo) v.setViewVisibility(R.id.icon_target, if (m.isTarget) View.VISIBLE else View.GONE)
+                // Where a jump would land shows next to the target only.
+                if (!m.isTarget) v.setViewVisibility(R.id.target_next, View.GONE)
+            }
+        }
+    }
+
+    /**
+     * ⓘ (indoors): the whole workout so far, one picture: its name, where you are and how long it
+     * is, then ten tiles: time so far, time left, average power, NP, average heart rate and
+     * cadence, calories, max power, TSS and IF. ✕ in the top right; a tap anywhere closes it.
+     */
+    private fun renderInfo(s: ScreenState, plan: WorkoutPlan): RemoteViews {
+        val layout = R.layout.field_info
+        val v = RemoteViews(context.packageName, layout)
+        applyAppearance(v, layout)
+        val (w, h) = config.viewSize
+        v.setOnClickPendingIntent(R.id.info_img, infoIntent)
+        v.setContentDescription(R.id.info_img, context.getString(R.string.cd_close))
+        if (w <= 0 || h <= 0) return v
+        val k = density * scale
+        val bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+        val c = android.graphics.Canvas(bmp)
+        val ink = color(R.color.text)
+        val pad = 8 * k
+        // ✕: a rounded square in the text colour, the cross in the page colour
+        val btn = 34 * k
+        val bx = w - pad - btn
+        val by = pad
+        val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        p.color = ink
+        c.drawRoundRect(bx, by, bx + btn, by + btn, 7 * k, 7 * k, p)
+        p.style = android.graphics.Paint.Style.STROKE
+        p.strokeCap = android.graphics.Paint.Cap.ROUND
+        p.strokeWidth = 3 * k
+        p.color = color(R.color.bg)
+        val mx = bx + btn / 2
+        val my = by + btn / 2
+        val xk = 8 * k
+        c.drawLine(mx - xk, my - xk, mx + xk, my + xk, p)
+        c.drawLine(mx + xk, my - xk, mx - xk, my + xk, p)
+        // Title and where you are
+        val titleP = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            typeface = Typeface.DEFAULT_BOLD
+            textSize = 17 * k
+            color = ink
+        }
+        val subP = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            textSize = 11 * k
+            color = color(R.color.text_secondary)
+        }
+        val room = bx - 6 * k - pad
+        fun cut(t: String, paint: android.graphics.Paint): String {
+            if (paint.measureText(t) <= room) return t
+            var e = t
+            while (e.length > 1 && paint.measureText("$e\u2026") > room) e = e.dropLast(1)
+            return "$e\u2026"
+        }
+        c.drawText(cut(plan.name, titleP), pad, by + 15 * k, titleP)
+        c.drawText(cut(context.getString(R.string.info_where, s.stepIndex + 1, s.stepCount, formatClock(plan.totalSec)), subP), pad, by + 31 * k, subP)
+        // The tiles: two columns, five rows, filling what's left of the field
+        val live = s.live
+        val ftp = s.ftp
+        val np = live?.np
+        val iF = if (np != null && ftp != null && ftp > 0) np.toFloat() / ftp else null
+        val tss = if (iF != null && live != null && ftp != null && np != null) (live.timeSec * np * iF / (ftp * 3600f) * 100).toInt() else null
+        val tiles = listOf(
+            R.string.info_time to live?.timeSec?.let(::formatClock),
+            R.string.info_left to s.workoutRemainingSec?.let(::formatClock),
+            R.string.info_avg_power to live?.avgPower?.toString(),
+            R.string.info_np to np?.toString(),
+            R.string.info_avg_hr to live?.avgHr?.toString(),
+            R.string.info_avg_cadence to live?.avgCadence?.toString(),
+            R.string.info_calories to live?.calories?.toString(),
+            R.string.info_max_power to live?.maxPower?.toString(),
+            R.string.info_tss to tss?.toString(),
+            R.string.info_if to iF?.let { String.format(java.util.Locale.forLanguageTag("pl"), "%.2f", it) },
+        )
+        val gap = 4 * k
+        val top = by + btn + 8 * k
+        val tileW = (w - 2 * pad - gap) / 2f
+        val tileH = ((h - top - pad - 4 * gap) / 5f).coerceIn(20 * k, 64 * k)
+        val tileFill = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            if (s.tileOutline) {
+                style = android.graphics.Paint.Style.STROKE
+                strokeWidth = 1 * k
+                color = color(R.color.text_secondary)
+            } else {
+                color = color(if (s.karooStyle) R.color.tile_tonal else R.color.tile)
+            }
+        }
+        val labelP = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            textSize = 10.5f * k
+            color = color(if (s.karooStyle) R.color.text else R.color.text_secondary)
+            typeface = if (s.karooStyle) Typeface.create("sans-serif-condensed", Typeface.NORMAL) else Typeface.DEFAULT
+        }
+        val valueP = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = ink
+            typeface = if (s.karooStyle) Typeface.create("sans-serif", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
+        }
+        tiles.forEachIndexed { i, (label, value) ->
+            val tx = pad + (i % 2) * (tileW + gap)
+            val ty = top + (i / 2) * (tileH + gap)
+            c.drawRoundRect(tx, ty, tx + tileW, ty + tileH, 6 * k, 6 * k, tileFill)
+            val text = context.getString(label).let { if (s.karooStyle) it.uppercase() else it }
+            c.drawText(text, tx + 6 * k, ty + 13 * k, labelP)
+            val valueText = value ?: "--"
+            // As big as the tile allows, up to 26sp
+            var sz = minOf(26 * k, tileH - 18 * k)
+            valueP.textSize = sz
+            while (sz > 10 * k && valueP.measureText(valueText) > tileW - 12 * k) {
+                sz -= 1 * k
+                valueP.textSize = sz
+            }
+            c.drawText(valueText, tx + 6 * k, ty + tileH - 6 * k, valueP)
+        }
+        v.setImageViewBitmap(R.id.info_img, bmp)
+        return v
     }
 
     /** Settings › Tiles: outline instead of the grey fill (Lap avg, Target or HR, Cadence). */
@@ -669,6 +890,9 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         // The classic layouts' Target tile has nothing to show without a workout: hidden, so the
         // tiles are one fewer (the gauge layouts' tiles are Lap avg, HR and Cadence).
         lapHiddenForJump = !gaugeMode
+        // The tiles set in Settings are the workout's; free ride keeps its own.
+        leftTileGone = false
+        rightTileGone = false
         intensityPct = 100
         applyTextSizes(v, gaugeMode, karoo)
 
@@ -1030,7 +1254,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
 
     /** Largest size up to [CELL_VALUE_SP] at which [text] fits in a Karoo-style cell. */
     private fun cellValueSp(text: String): Float {
-        val tiles = (if (cadTileShown) 3f else 2f) - (if (lapHiddenForJump) 1f else 0f)
+        val tiles = ((if (cadTileShown) 3f else 2f) - (if (lapHiddenForJump || leftTileGone) 1f else 0f) - (if (rightTileGone) 1f else 0f)).coerceAtLeast(1f)
         val cellPx = ((config.viewSize.first - 16 * density) / tiles - 3 * density - 12 * density).coerceAtLeast(1f)
         var sp = CELL_VALUE_SP
         while (sp > 16f) {
@@ -1049,6 +1273,9 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     /** Cadence reported at least once: the free-ride tile stays (shows -- when it drops to 0). */
     private var freeCadSeen = false
     private var lapHiddenForJump = false
+    /** A tile switched off in Settings › Lewy / Prawy kafelek. */
+    private var leftTileGone = false
+    private var rightTileGone = false
     /** Today's intensity: step summaries ("3m @ 180–207W") show the scaled watts too. */
     private var intensityPct = 100
 

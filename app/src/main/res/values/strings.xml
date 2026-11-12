@@ -248,4 +248,52 @@
     <string name="intro_change_later">Resztę zmienisz w</string>
     <string name="intro_settings">Ustawieniach.</string>
     <string name="intro_again">Pokaż wprowadzenie</string>
+
+    <!-- Workout details (a tap on a workout card) -->
+    <string name="select_workout">Wybierz trening</string>
+    <string name="details_ftp">FTP %1$d W</string>
+    <string name="details_tap_hint">Dotknij bloku, by zobaczyć jego interwał.</string>
+    <string name="details_numbers">Liczby</string>
+    <string name="details_zones">Czas w strefach</string>
+    <string name="details_intervals">Interwały (%1$d)</string>
+    <string name="details_from">od %1$s</string>
+    <string name="details_time">Czas</string>
+    <string name="details_avg">Śr. moc</string>
+
+    <!-- Intensity preview on the Workouts page -->
+    <string name="preview_first">Pierwszy interwał</string>
+    <string name="preview_now">Teraz %1$d / %2$d</string>
+
+    <!-- Left / right tile (Settings) -->
+    <string name="calories">Kalorie</string>
+    <string name="speed">Prędkość</string>
+    <string name="left_tile">Lewy kafelek</string>
+    <string name="right_tile">Prawy kafelek</string>
+    <string name="left_tile_help">Co pokazuje lewy kafelek ekranu treningu. Dotknięcie kafelka przechodzi do następnej zaznaczonej wartości. Nic nie zaznaczone: kafelka nie ma, a reszta zajmuje jego miejsce (bez żadnego kafelka waty są większe).</string>
+    <string name="right_tile_help">Co pokazuje prawy kafelek (Cel, a przy wskaźniku kafelek HR). Dotknięcie przechodzi do następnej zaznaczonej wartości. Nic nie zaznaczone: kafelka nie ma. Kafelek kadencji zostaje jak był.</string>
+    <string name="tiles_reset">Przywróć domyślne</string>
+    <string name="metric_lap_avg">Średnia okrążenia</string>
+    <string name="metric_lap_np">NP okrążenia</string>
+    <string name="metric_ride_avg">Średnia jazdy</string>
+    <string name="metric_target">Cel</string>
+    <string name="metric_target_range">Zakres celu</string>
+    <string name="metric_hr">Tętno</string>
+    <string name="metric_cadence">Kadencja</string>
+    <string name="metric_calories">Kalorie</string>
+    <string name="metric_speed">Prędkość</string>
+
+    <!-- ⓘ: the whole workout so far (indoors) -->
+    <string name="cd_info">Cały trening do tej pory</string>
+    <string name="cd_close">Zamknij</string>
+    <string name="info_where">Interwał %1$d / %2$d · łącznie %3$s</string>
+    <string name="info_time">Czas treningu</string>
+    <string name="info_left">Do końca</string>
+    <string name="info_avg_power">Śr. moc</string>
+    <string name="info_np">NP</string>
+    <string name="info_avg_hr">Śr. tętno</string>
+    <string name="info_avg_cadence">Śr. kadencja</string>
+    <string name="info_calories">Kalorie</string>
+    <string name="info_max_power">Maks. moc</string>
+    <string name="info_tss">TSS</string>
+    <string name="info_if">IF</string>
 </resources>

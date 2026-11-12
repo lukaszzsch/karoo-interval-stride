@@ -106,6 +106,22 @@ data class ScreenState(
     val ergConnected: Boolean = false,
     /** Before the ride, on a profile without ERG, the Karoo's power comes from the trainer: hint to pick an indoor profile. */
     val trainerOutdoor: Boolean = false,
+    /** ⓘ (indoors): the whole workout so far fills the field; a tap closes it. */
+    val infoOpen: Boolean = false,
+    /** The workout so far, for ⓘ (updated about once a second while it's open). */
+    val live: WorkoutLive? = null,
+    /** The ride's calories (Karoo). */
+    val calories: Int? = null,
+    /** Speed in m/s (Karoo). */
+    val speedMs: Double? = null,
+    /** The rider's units are imperial (speed in mph). */
+    val imperial: Boolean = false,
+    /** Settings › Lewy / Prawy kafelek: the metrics each tile goes through (null: as before). */
+    val leftTile: List<TileMetric>? = null,
+    val rightTile: List<TileMetric>? = null,
+    /** Which of its metrics each tile shows now (a tap goes on to the next). */
+    val leftTileIndex: Int = 0,
+    val rightTileIndex: Int = 0,
 ) {
     val workoutLoaded: Boolean get() = plan != null
     val stepCount: Int get() = plan?.steps?.size ?: 0
@@ -145,6 +161,15 @@ data class ScreenState(
     val targetRange: IntRange? get() = currentStep?.takeIf { it.hasTarget }?.rangeAt(elapsedInStepSec)
         ?.let { scaled(it.first)..scaled(it.last) }
 
+    /**
+     * The current interval holds one fixed wattage (not written as a range, not a ramp): its target
+     * shows as those watts (what ERG holds), never as the tolerance band around them.
+     */
+    val targetIsFixed: Boolean get() = currentStep?.let { !it.isRange && !it.isRamp } ?: false
+
+    /** The band to show as text: the step's range, or null for a fixed-watts interval. */
+    val shownRange: IntRange? get() = targetRange?.takeIf { !targetIsFixed && it.first != it.last }
+
     /** [watts] at today's [intensityPct] (95% on a weaker day). */
     fun scaled(watts: Int): Int = if (intensityPct == 100) watts else Math.round(watts * intensityPct / 100f)
 }
@@ -171,3 +196,14 @@ enum class WattsMode {
 
     fun next(): WattsMode = entries[(ordinal + 1) % entries.size]
 }
+
+/** The workout so far (ⓘ): from START, while it runs. */
+data class WorkoutLive(
+    val timeSec: Int,
+    val avgPower: Int?,
+    val np: Int?,
+    val avgHr: Int?,
+    val avgCadence: Int?,
+    val maxPower: Int?,
+    val calories: Int?,
+)

@@ -90,9 +90,11 @@ class PowerHistoryChart(private val context: Context) {
         // Whole ride: columns fill the width; a fixed span: each column a fixed width.
         val w = if (spanSec == null) width.toFloat() / maxOf(1, cols.size) else width.toFloat() / total
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        val night = Zones.isNight(context)
         cols.forEachIndexed { i, watts ->
             val h = (watts / top * plotH).coerceIn(if (watts > 0) 1f else 0f, plotH)
-            paint.color = context.getColor(zoneColors[zoneIndex(watts.toInt(), zones, ftp)])
+            // +15 % contrast against the page, like the workout profile (the Karoo's screen is pale)
+            paint.color = Zones.boosted(context.getColor(zoneColors[zoneIndex(watts.toInt(), zones, ftp)]), night)
             val gap = if (w > 2 * density) 0.5f * density else 0f
             canvas.drawRect(i * w, height - h, (i + 1) * w - gap, height.toFloat(), paint)
         }

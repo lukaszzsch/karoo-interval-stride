@@ -26,6 +26,9 @@ class ActionReceiver : BroadcastReceiver() {
             ACTION_TOGGLE_FREE_CHART -> session.toggleFreeChart()
             ACTION_TOGGLE_LAP_HR -> session.toggleLapHr()
             ACTION_TOGGLE_WATTS_COLOR -> session.toggleWattsColor()
+            ACTION_LEFT_TILE -> session.cycleTile(left = true)
+            ACTION_RIGHT_TILE -> session.cycleTile(left = false)
+            ACTION_TOGGLE_INFO -> session.toggleInfo()
         }
     }
 
@@ -47,5 +50,8 @@ class ActionReceiver : BroadcastReceiver() {
         const val ACTION_TOGGLE_FREE_CHART = "com.daviddokakis.karoointerval.TOGGLE_FREE_CHART"
         const val ACTION_TOGGLE_LAP_HR = "com.daviddokakis.karoointerval.TOGGLE_LAP_HR"
         const val ACTION_TOGGLE_WATTS_COLOR = "com.daviddokakis.karoointerval.TOGGLE_WATTS_COLOR"
+        const val ACTION_LEFT_TILE = "com.daviddokakis.karoointerval.LEFT_TILE"
+        const val ACTION_RIGHT_TILE = "com.daviddokakis.karoointerval.RIGHT_TILE"
+        const val ACTION_TOGGLE_INFO = "com.daviddokakis.karoointerval.TOGGLE_INFO"
     }
 }
