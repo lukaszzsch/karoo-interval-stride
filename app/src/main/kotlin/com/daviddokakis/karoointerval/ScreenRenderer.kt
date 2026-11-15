@@ -124,6 +124,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         // Debug builds show demo data; in release builds this returns the real state unchanged.
         val s = DemoData.apply(state)
         useAppearance(s.appearance)
+        karooNow = s.karooStyle
         if (s.infoOpen && s.plan != null) return renderInfo(s, s.plan)
         // No workout, or the workout is done and the ride goes on: the free-ride screen.
         if (s.plan == null || s.finished) return renderFreeRide(s)
@@ -326,7 +327,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
 
         // Tiles
         // Lap tile: tap to switch between the lap average and lap NP.
-        v.setTextViewText(R.id.lap_avg_label, context.getString(if (s.lapShowsNp) R.string.np else R.string.lap_avg))
+        setTileLabel(v, R.id.lap_avg_label, context.getString(if (s.lapShowsNp) R.string.np else R.string.lap_avg))
         v.setTextViewText(R.id.lap_avg, (if (s.lapShowsNp) s.lapNp else s.lapAvg)?.toString() ?: "--")
         v.setOnClickPendingIntent(R.id.lap_tile, lapNpToggleIntent)
         v.setViewVisibility(R.id.lap_tile, if (lapHiddenForJump) View.GONE else View.VISIBLE)
@@ -366,10 +367,10 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             // (Karoo native styling keeps the label "TARGET": "TARGET RANGE" doesn't fit at Karoo's
             // label size, and the value shows whether it's a range.)
             if (s.targetShowsRange && band != null) {
-                v.setTextViewText(R.id.target_label, context.getString(if (karoo) R.string.target else R.string.target_range))
+                setTileLabel(v, R.id.target_label, context.getString(if (karoo) R.string.target else R.string.target_range))
                 v.setTextViewText(R.id.target, "${band.first}–${band.last}")
             } else {
-                v.setTextViewText(R.id.target_label, context.getString(R.string.target))
+                setTileLabel(v, R.id.target_label, context.getString(R.string.target))
                 v.setTextViewText(R.id.target, s.target?.toString() ?: "--")
             }
             // The trainer holds this target in ERG.
@@ -378,10 +379,6 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             when {
                 s.ergActive -> v.setTextViewText(R.id.target_label, context.getString(R.string.target_erg) + pct)
                 pct.isNotEmpty() -> v.setTextViewText(R.id.target_label, context.getString(R.string.target) + pct)
-            }
-            // A plain "Cel" takes turns with "mocy" (the label reads "Cel mocy" over two frames).
-            if (!karoo && !s.ergActive && pct.isEmpty() && !(s.targetShowsRange && band != null) && labelFrame() == 1) {
-                v.setTextViewText(R.id.target_label, context.getString(R.string.target_power_word))
             }
             v.setOnClickPendingIntent(R.id.target_tile, targetToggleIntent)
         }
@@ -692,7 +689,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             if (m == null) {
                 v.setViewVisibility(R.id.lap_tile, View.GONE)
             } else {
-                v.setTextViewText(R.id.lap_avg_label, t.label)
+                setTileLabel(v, R.id.lap_avg_label, t.label)
                 v.setTextColor(R.id.lap_avg_label, labelColorFor(t))
                 v.setTextViewText(R.id.lap_avg, t.value)
                 v.setOnClickPendingIntent(R.id.lap_tile, leftTileIntent)
@@ -710,7 +707,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             val labelId = if (gaugeMode) R.id.hr_label else R.id.target_label
             val valueId = if (gaugeMode) R.id.hr else R.id.target
             v.setViewVisibility(tile, View.VISIBLE)
-            v.setTextViewText(labelId, t.label)
+            setTileLabel(v, labelId, t.label)
             v.setTextColor(labelId, labelColorFor(t))
             v.setTextViewText(valueId, t.value)
             v.setOnClickPendingIntent(tile, rightTileIntent)
@@ -953,7 +950,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         // Top HR (classic) shows the heart rate now; the gauge's HR tile goes through its values.
         v.setTextViewText(R.id.hr, if (gaugeMode) hrText else s.heartRate?.toString() ?: "--")
         if (gaugeMode) {
-            v.setTextViewText(
+            setTileLabel(
+                v,
                 R.id.hr_label,
                 context.getString(
                     when (s.freeHrTile) {
@@ -999,7 +997,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         v.setViewVisibility(R.id.tiles_row, View.VISIBLE)
         v.setViewVisibility(R.id.confirm_row, View.GONE)
         v.setViewVisibility(R.id.move_cancelled, View.GONE)
-        v.setTextViewText(
+        setTileLabel(
+            v,
             R.id.lap_avg_label,
             context.getString(
                 when (s.freePowerTile) {
@@ -1290,6 +1289,44 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     }
 
     private val classicPaint = TextPaint(TextPaint.ANTI_ALIAS_FLAG).apply { typeface = Typeface.DEFAULT_BOLD }
+
+    private var karooNow = false
+
+    /**
+     * A tile's label. Classic layouts write a short label out in two turns instead of
+     * abbreviating it ("Śr. okr." → "Średnia", then "okrążenia"), each at the tile-label size or a
+     * little smaller to fit. Karoo native styling keeps its own short labels.
+     */
+    private fun setTileLabel(v: RemoteViews, id: Int, label: String) {
+        if (karooNow) {
+            v.setTextViewText(id, label)
+            return
+        }
+        val text = labelTurns()[label]?.get(labelFrame()) ?: label
+        v.setTextViewText(id, text)
+        val sp = fitSp(text, TILE_LABEL_SP, TILE_LABEL_MIN_SP, classicCellPx()) ?: TILE_LABEL_MIN_SP
+        v.setTextViewTextSize(id, TypedValue.COMPLEX_UNIT_PX, sp * density * scale)
+    }
+
+    private var turns: Map<String, List<String>>? = null
+
+    private fun labelTurns(): Map<String, List<String>> = turns ?: run {
+        fun g(id: Int) = context.getString(id)
+        val lap = g(R.string.turn_lap)
+        val ride = g(R.string.turn_ride)
+        mapOf(
+            g(R.string.lap_avg) to listOf(g(R.string.turn_avg), lap),
+            g(R.string.np) to listOf("NP", lap),
+            g(R.string.lap_hr) to listOf(g(R.string.heart_rate), lap),
+            g(R.string.ride_avg) to listOf(g(R.string.turn_avg), ride),
+            g(R.string.ride_np) to listOf("NP", ride),
+            g(R.string.ride_hr) to listOf(g(R.string.heart_rate), ride),
+            g(R.string.ride_if) to listOf("IF", ride),
+            g(R.string.ride_tss) to listOf("TSS", ride),
+            g(R.string.target_range) to listOf(g(R.string.turn_range), g(R.string.turn_target)),
+            g(R.string.target) to listOf(g(R.string.target), g(R.string.target_power_word)),
+        ).also { turns = it }
+    }
 
     /** Which of two labels taking turns shows now: each stays [LABEL_TURN_MS]. */
     private fun labelFrame(): Int = ((SystemClock.elapsedRealtime() / LABEL_TURN_MS) % 2).toInt()

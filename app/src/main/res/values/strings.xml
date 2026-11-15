@@ -20,6 +20,12 @@
     <string name="target">Cel</string>
     <string name="target_erg">ERG</string>
     <string name="target_power_word">mocy</string>
+    <!-- Tile labels written out in two turns (classic layouts): "Średnia" / "okrążenia" -->
+    <string name="turn_avg">Średnia</string>
+    <string name="turn_lap">okrążenia</string>
+    <string name="turn_ride">jazdy</string>
+    <string name="turn_range">Zakres</string>
+    <string name="turn_target">celu</string>
     <string name="intensity_value">Intensywność %1$d%%</string>
     <string name="erg_title">Trenażer (ERG)</string>
     <string name="erg_control">Sterowanie ERG</string>
