@@ -163,6 +163,12 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         val leftShow = tileShow(s, s.leftTile, s.leftTileIndex, karoo)
         val rightShow = tileShow(s, s.rightTile, s.rightTileIndex, karoo)
         leftShow?.let { lapText = it.value }
+        // Lap average against the interval's target range, like the cadence tile: -1 under, 0 in,
+        // 1 over; null when the tile shows something else, on a ramp, or with no workout running.
+        val lapShowsAvg = leftShow?.metric?.let { it == TileMetric.LAP_AVG } ?: !s.lapShowsNp
+        val lapState = s.lapAvg?.takeIf { lapShowsAvg && !lapHiddenForJump && !s.waiting && !s.finished && !s.workoutPaused && s.currentStep?.isRamp != true }
+            ?.let { avg -> s.targetRange?.let { r -> if (avg < r.first) -1 else if (avg > r.last) 1 else 0 } }
+        if (lapState != null) lapText = (when (lapState) { -1 -> "\u2191"; 1 -> "\u2193"; else -> "" }) + s.lapAvg
         rightShow?.let { if (gaugeMode) hrText = it.value else targetText = it.value }
         leftTileGone = leftShow === TileShow.HIDDEN
         rightTileGone = rightShow === TileShow.HIDDEN
@@ -328,7 +334,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         // Tiles
         // Lap tile: tap to switch between the lap average and lap NP.
         setTileLabel(v, R.id.lap_avg_label, context.getString(if (s.lapShowsNp) R.string.np else R.string.lap_avg))
-        v.setTextViewText(R.id.lap_avg, (if (s.lapShowsNp) s.lapNp else s.lapAvg)?.toString() ?: "--")
+        v.setTextViewText(R.id.lap_avg, lapText)
         v.setOnClickPendingIntent(R.id.lap_tile, lapNpToggleIntent)
         v.setViewVisibility(R.id.lap_tile, if (lapHiddenForJump) View.GONE else View.VISIBLE)
 
@@ -540,6 +546,13 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             setBg(v, R.id.cad_tile, when (cadState) { -1 -> R.drawable.bg_cad_under; 1 -> R.drawable.bg_cad_over; else -> R.drawable.bg_cad_in })
         }
         applyCustomTiles(v, s, leftShow, rightShow, gaugeMode, karoo, labelColor)
+        if (lapState != null) {
+            // Filled like the cadence tile, white text (after the custom tiles set their colours).
+            setBg(v, R.id.lap_tile, when (lapState) { -1 -> R.drawable.bg_cad_under; 1 -> R.drawable.bg_cad_over; else -> R.drawable.bg_cad_in })
+            v.setTextViewText(R.id.lap_avg, lapText)
+            v.setTextColor(R.id.lap_avg, color(R.color.cad_on))
+            v.setTextColor(R.id.lap_avg_label, color(R.color.cad_on))
+        }
         if (tilesRowGone) v.setViewVisibility(R.id.tiles_row, View.GONE)
 
         // Chart
