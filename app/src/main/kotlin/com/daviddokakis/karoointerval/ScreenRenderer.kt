@@ -303,7 +303,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
                 v.setTextColor(R.id.interval_label, color(R.color.watts_in_range))
             } else {
                 v.setTextViewText(R.id.interval_label, intervalLabel(s))
-                v.setTextColor(R.id.interval_label, color(if (karoo) R.color.text else R.color.text_secondary))
+                // Full text colour (not the grey secondary one): readable in sunlight.
+                v.setTextColor(R.id.interval_label, color(R.color.text))
             }
         }
         // Time left in the interval, with a minus so it reads as counting down.
@@ -1158,7 +1159,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         // Room for the label: the row minus the time left on its right (and Karoo style's timer icon).
         val timePx = measure("\u2212" + "00:00", if (s.karooStyle) 23f else 30f, bold = true, karoo = false)
         val avail = config.viewSize.first - (16 + 8 + if (s.karooStyle) 16 else 0) * density - timePx
-        return ticker(intervalTicker, prefix, step.note, avail, 13f, s.karooStyle)
+        return ticker(intervalTicker, prefix, step.note, avail, if (s.karooStyle) 13f else INTERVAL_LABEL_SP, s.karooStyle)
     }
 
     /** "Next up · 92–98 rpm · Dwuminutówka 2" when the step has a cadence target or note. */
@@ -1353,7 +1354,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         } else {
             // Tile values at 22sp, smaller when one doesn't fit its tile (a range like "193–215"
             // next to the cadence tile).
-            sizes += listOf(R.id.interval_label to 13f, R.id.time_left to 30f, R.id.lap_avg to classicCellSp(lapText))
+            sizes += listOf(R.id.interval_label to INTERVAL_LABEL_SP, R.id.time_left to 30f, R.id.lap_avg to classicCellSp(lapText))
             sizes += listOf(R.id.cad_value to classicCellSp(cadText), R.id.cad_label to 14f)
             sizes += if (gaugeMode) {
                 listOf(R.id.hr to classicCellSp(hrText), R.id.hr_label to 14f, R.id.lap_avg_label to 14f, R.id.target_label to 11f, R.id.target to 18f, R.id.target_next to 14f)
@@ -1396,6 +1397,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     companion object {
         /** The label over the next interval ("Start od 1 / 13", "Następny · …"). */
         private const val NEXT_LABEL_SP = 14f
+        /** The interval's label beside its clock ("1 / 13 · Progresja"), classic layouts. */
+        private const val INTERVAL_LABEL_SP = 16f
         /** Classic tile labels, and the smallest they shrink to before shortening. */
         private const val TILE_LABEL_SP = 14f
         private const val TILE_LABEL_MIN_SP = 12f
