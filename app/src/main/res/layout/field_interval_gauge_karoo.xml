@@ -512,7 +512,6 @@
                         android:includeFontPadding="false"
                         android:maxLines="1"
                         android:textColor="@color/text_secondary"
-                        android:textStyle="bold"
                     android:textSize="14sp"
                         android:ellipsize="end" />
 

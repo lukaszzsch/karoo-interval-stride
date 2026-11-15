@@ -335,10 +335,19 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         v.setViewVisibility(R.id.cad_tile, if (cadTileShown) View.VISIBLE else View.GONE)
         if (cadTileShown) {
             val step = s.currentStep
-            v.setTextViewText(
-                R.id.cad_label,
-                step?.cadenceRange?.let { context.getString(R.string.cadence_target, it) } ?: context.getString(R.string.cadence),
-            )
+            // "Kad. 85–90" at the tile-label size, a little smaller if the tile is too narrow, and
+            // just "85–90" when even that doesn't fit.
+            var cadLabel = step?.cadenceRange?.let { context.getString(R.string.cadence_target, it) } ?: context.getString(R.string.cadence)
+            if (!karoo) {
+                val room = classicCellPx()
+                var sp = fitSp(cadLabel, TILE_LABEL_SP, TILE_LABEL_MIN_SP, room)
+                if (sp == null) {
+                    cadLabel = step?.cadenceRange ?: cadLabel
+                    sp = fitSp(cadLabel, TILE_LABEL_SP, TILE_LABEL_MIN_SP, room) ?: TILE_LABEL_MIN_SP
+                }
+                v.setTextViewTextSize(R.id.cad_label, TypedValue.COMPLEX_UNIT_PX, sp * density * scale)
+            }
+            v.setTextViewText(R.id.cad_label, cadLabel)
             v.setTextViewText(R.id.cad_value, cadText)
             // Against a target the whole tile takes a strong colour (its background is set after
             // the tile style, below) with white text: readable at a glance, in sunlight too.
@@ -1157,7 +1166,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         val prefix = (listOf(label) + listOfNotNull(step.cadenceText)).joinToString(SEP)
         // Between the 56 dp ⏮ and ⏭ buttons.
         val avail = config.viewSize.first - (16 + 112 + 16) * density
-        return ticker(nextTicker, prefix, step.note, avail, 11f, karoo)
+        return ticker(nextTicker, prefix, step.note, avail, NEXT_LABEL_SP, karoo)
     }
 
     /** When the note being scrolled first showed, per label. */
@@ -1279,10 +1288,25 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
 
     private val classicPaint = TextPaint(TextPaint.ANTI_ALIAS_FLAG).apply { typeface = Typeface.DEFAULT_BOLD }
 
+    /** Room for text inside a classic tile (8dp padding each side). */
+    private fun classicCellPx(): Float {
+        val tiles = ((if (cadTileShown) 3f else 2f) - (if (lapHiddenForJump || leftTileGone) 1f else 0f) - (if (rightTileGone) 1f else 0f)).coerceAtLeast(1f)
+        return ((config.viewSize.first - 16 * density) / tiles - 6 * density - 16 * density - 2 * density).coerceAtLeast(1f)
+    }
+
+    /** Largest bold size from [maxSp] down to [minSp] at which [text] fits [roomPx], or null. */
+    private fun fitSp(text: String, maxSp: Float, minSp: Float, roomPx: Float): Float? {
+        var sp = maxSp
+        while (sp >= minSp) {
+            if (measure(text, sp, bold = true, karoo = false) <= roomPx) return sp
+            sp -= 1f
+        }
+        return null
+    }
+
     /** Largest size up to 22sp at which [text] fits in a classic tile (8dp padding each side). */
     private fun classicCellSp(text: String): Float {
-        val tiles = ((if (cadTileShown) 3f else 2f) - (if (lapHiddenForJump || leftTileGone) 1f else 0f) - (if (rightTileGone) 1f else 0f)).coerceAtLeast(1f)
-        val cellPx = ((config.viewSize.first - 16 * density) / tiles - 6 * density - 16 * density - 2 * density).coerceAtLeast(1f)
+        val cellPx = classicCellPx()
         var sp = CLASSIC_CELL_SP
         while (sp > 12f) {
             classicPaint.textSize = sp * density * scale
@@ -1311,7 +1335,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     private fun applyTextSizes(v: RemoteViews, gaugeMode: Boolean, karoo: Boolean) {
         // Must match the sp sizes in the layouts (the reference size).
         val sizes = mutableListOf(
-            R.id.paused_text to 13f, R.id.next_label to 14f, R.id.confirm_text to 17f,
+            R.id.paused_text to 13f, R.id.next_label to NEXT_LABEL_SP, R.id.confirm_text to 17f,
             R.id.move_cancelled_text to 16f, R.id.countdown to 31f,
         )
         if (karoo) {
@@ -1370,6 +1394,11 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     }
 
     companion object {
+        /** The label over the next interval ("Start od 1 / 13", "Następny · …"). */
+        private const val NEXT_LABEL_SP = 14f
+        /** Classic tile labels, and the smallest they shrink to before shortening. */
+        private const val TILE_LABEL_SP = 14f
+        private const val TILE_LABEL_MIN_SP = 12f
         private const val SEP = " \u00b7 "
         /** Redraws (about seconds) a scrolled note waits at its start and at its end. */
         private const val HOLD = 2
