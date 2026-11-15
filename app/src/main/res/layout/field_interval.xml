@@ -164,7 +164,9 @@
                     android:layout_height="wrap_content"
                     android:text="@string/lap_avg"
                     android:textColor="@color/text_secondary"
-                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:includeFontPadding="false"
+                    android:textSize="14sp"
                     android:maxLines="1"
                     android:ellipsize="end" />
 
@@ -196,7 +198,9 @@
                     android:layout_height="wrap_content"
                     android:text="@string/target"
                     android:textColor="@color/text_secondary"
-                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:includeFontPadding="false"
+                    android:textSize="14sp"
                     android:maxLines="1"
                     android:ellipsize="end" />
 
@@ -248,7 +252,9 @@
                     android:layout_height="wrap_content"
                     android:text="@string/cadence"
                     android:textColor="@color/text_secondary"
-                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:includeFontPadding="false"
+                    android:textSize="14sp"
                     android:maxLines="1"
                     android:ellipsize="end" />
 
@@ -436,7 +442,8 @@
                         android:includeFontPadding="false"
                         android:maxLines="1"
                         android:textColor="@color/text_secondary"
-                        android:textSize="11sp"
+                        android:textStyle="bold"
+                    android:textSize="14sp"
                         android:ellipsize="end" />
 
                     <TextView

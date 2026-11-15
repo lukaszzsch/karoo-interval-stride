@@ -95,4 +95,9 @@
     <color name="erg_alert_warn">#FFB3261E</color>
     <color name="erg_alert_text">#FFFFFFFF</color>
     <color name="halfway_alert">#FF185FA5</color>
+    <!-- Cadence tile against its target: strong fills under white text (>= 4.5:1), the same in both themes -->
+    <color name="cad_bg_in">#FF2E7D32</color>
+    <color name="cad_bg_under">#FF1565C0</color>
+    <color name="cad_bg_over">#FFC62828</color>
+    <color name="cad_on">#FFFFFFFF</color>
 </resources>

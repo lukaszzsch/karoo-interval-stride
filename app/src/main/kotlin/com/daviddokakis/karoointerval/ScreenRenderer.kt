@@ -145,7 +145,11 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             if (s.targetShowsRange && band != null) "${band.first}–${band.last}" else s.target?.toString() ?: "--"
         }
         hrText = s.heartRate?.toString() ?: "--"
-        cadText = s.cadence?.takeIf { it > 0 }?.toString() ?: "--"
+        // Cadence against the step's target: -1 too low, 0 in, 1 too high, null no target / no rpm.
+        val liveCad = s.cadence?.takeIf { it > 0 }
+        val cadState = if (liveCad != null) s.currentStep?.cadenceState(liveCad) else null
+        // An arrow tells which way to go even when the colours don't show (sunlight): ↑ spin faster.
+        cadText = liveCad?.let { (when (cadState) { -1 -> "\u2191"; 1 -> "\u2193"; else -> "" }) + it } ?: "--"
         cadTileShown = (s.cadence ?: 0) > 0 || s.currentStep?.cadenceRange != null
         // While a jump is chosen or counting down, the Target tile shows "174 → 189": the Lap avg
         // tile steps aside so it fits (the gauge layouts show the target in the top row instead).
@@ -336,15 +340,10 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
                 step?.cadenceRange?.let { context.getString(R.string.cadence_target, it) } ?: context.getString(R.string.cadence),
             )
             v.setTextViewText(R.id.cad_value, cadText)
-            val live = s.cadence?.takeIf { it > 0 }
-            val cadColor = when (if (live != null) step?.cadenceState(live) else null) {
-                -1 -> R.color.watts_under
-                0 -> R.color.watts_in_range
-                1 -> R.color.watts_over
-                else -> R.color.text
-            }
-            v.setTextColor(R.id.cad_value, color(cadColor))
-            v.setTextColor(R.id.cad_label, labelColor)
+            // Against a target the whole tile takes a strong colour (its background is set after
+            // the tile style, below) with white text: readable at a glance, in sunlight too.
+            v.setTextColor(R.id.cad_value, color(if (cadState != null) R.color.cad_on else R.color.text))
+            v.setTextColor(R.id.cad_label, if (cadState != null) color(R.color.cad_on) else labelColor)
         }
         // A fixed-watts interval shows its watts (what ERG holds), never the tolerance band around them.
         val band = s.shownRange
@@ -528,6 +527,9 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         applyTopRow(v, s, top, gaugeMode, karoo, free = false)
         if (s.waiting && s.ergConnected) showErgReady(v, s, top, gaugeMode, karoo)
         applyTileStyle(v, s, gaugeMode)
+        if (cadTileShown && cadState != null) {
+            setBg(v, R.id.cad_tile, when (cadState) { -1 -> R.drawable.bg_cad_under; 1 -> R.drawable.bg_cad_over; else -> R.drawable.bg_cad_in })
+        }
         applyCustomTiles(v, s, leftShow, rightShow, gaugeMode, karoo, labelColor)
         if (tilesRowGone) v.setViewVisibility(R.id.tiles_row, View.GONE)
 
@@ -1309,7 +1311,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     private fun applyTextSizes(v: RemoteViews, gaugeMode: Boolean, karoo: Boolean) {
         // Must match the sp sizes in the layouts (the reference size).
         val sizes = mutableListOf(
-            R.id.paused_text to 13f, R.id.next_label to 11f, R.id.confirm_text to 17f,
+            R.id.paused_text to 13f, R.id.next_label to 14f, R.id.confirm_text to 17f,
             R.id.move_cancelled_text to 16f, R.id.countdown to 31f,
         )
         if (karoo) {
@@ -1328,9 +1330,9 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             // Tile values at 22sp, smaller when one doesn't fit its tile (a range like "193–215"
             // next to the cadence tile).
             sizes += listOf(R.id.interval_label to 13f, R.id.time_left to 30f, R.id.lap_avg to classicCellSp(lapText))
-            sizes += listOf(R.id.cad_value to classicCellSp(cadText), R.id.cad_label to 11f)
+            sizes += listOf(R.id.cad_value to classicCellSp(cadText), R.id.cad_label to 14f)
             sizes += if (gaugeMode) {
-                listOf(R.id.hr to classicCellSp(hrText), R.id.hr_label to 11f, R.id.lap_avg_label to 11f, R.id.target_label to 11f, R.id.target to 18f, R.id.target_next to 14f)
+                listOf(R.id.hr to classicCellSp(hrText), R.id.hr_label to 14f, R.id.lap_avg_label to 14f, R.id.target_label to 11f, R.id.target to 18f, R.id.target_next to 14f)
             } else {
                 listOf(R.id.hr to 18f, R.id.target to classicCellSp(targetText), R.id.target_next to 16f)
             }

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cadence tile against its target (strong fill, white text: readable in sunlight). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/cad_bg_over" />
+    <corners android:radius="8dp" />
+</shape>
