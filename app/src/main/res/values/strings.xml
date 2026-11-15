@@ -201,6 +201,9 @@
     <string name="rate_prompt_short">dotknij, by ocenić</string>
     <string name="rate_notification_header">Ocena jazdy</string>
     <string name="rate_notification_message">Jak ciężka była ta jazda?</string>
+    <string name="rate_notification_drift">Dryf tętna %1$s%% (%2$s). %3$s</string>
+    <string name="drift_ok">dobrze</string>
+    <string name="drift_high">wysoki</string>
     <string name="rate_notification_sub">Oceń RPE przed zakończeniem jazdy</string>
     <string name="rate_notification_action">Oceń</string>
     <string name="rate_sync_done">%1$s wysłano do Stride</string>

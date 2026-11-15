@@ -156,12 +156,24 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
                 // A new id each time: the Karoo may not show a notification again under the same id.
                 id = "$NOTIFICATION_RATE-${System.currentTimeMillis()}",
                 header = getString(R.string.rate_notification_header),
-                message = getString(R.string.rate_notification_message),
+                message = rateMessage(),
                 subText = getString(R.string.rate_notification_sub),
                 action = getString(R.string.rate_notification_action),
                 actionIntent = RateActivity.ACTION_RATE,
             ),
         )
+    }
+
+    /**
+     * "Jak ciężka była ta jazda?", led by the finished workout's heart rate drift when there is
+     * one ("Dryf tętna 3,2% (dobrze). …"): under 5 % the aerobic base held.
+     */
+    private fun rateMessage(): String {
+        val question = getString(R.string.rate_notification_message)
+        val drift = workout.state.value.summary?.driftPct ?: return question
+        val value = String.format(java.util.Locale.forLanguageTag("pl"), "%.1f", drift)
+        val verdict = getString(if (drift < 5.0) R.string.drift_ok else R.string.drift_high)
+        return getString(R.string.rate_notification_drift, value, verdict, question)
     }
 
     private suspend fun syncRating(pending: PendingRating) {
