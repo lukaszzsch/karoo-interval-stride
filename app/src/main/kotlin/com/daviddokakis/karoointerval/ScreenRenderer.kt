@@ -336,17 +336,15 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         v.setViewVisibility(R.id.cad_tile, if (cadTileShown) View.VISIBLE else View.GONE)
         if (cadTileShown) {
             val step = s.currentStep
-            // "Kad. 85–90" at the tile-label size, a little smaller if the tile is too narrow, and
-            // just "85–90" when even that doesn't fit.
-            var cadLabel = step?.cadenceRange?.let { context.getString(R.string.cadence_target, it) } ?: context.getString(R.string.cadence)
-            if (!karoo) {
-                val room = classicCellPx()
-                var sp = fitSp(cadLabel, TILE_LABEL_SP, TILE_LABEL_MIN_SP, room)
-                if (sp == null) {
-                    cadLabel = step?.cadenceRange ?: cadLabel
-                    sp = fitSp(cadLabel, TILE_LABEL_SP, TILE_LABEL_MIN_SP, room) ?: TILE_LABEL_MIN_SP
+            // Classic: with a target the label takes turns, "Kadencja" then "85–90", each at the
+            // tile-label size (a little smaller if the tile is too narrow).
+            val cadLabel = if (karoo) {
+                step?.cadenceRange?.let { context.getString(R.string.cadence_target, it) } ?: context.getString(R.string.cadence)
+            } else {
+                (step?.cadenceRange?.takeIf { labelFrame() == 1 } ?: context.getString(R.string.cadence)).also { t ->
+                    val sp = fitSp(t, TILE_LABEL_SP, TILE_LABEL_MIN_SP, classicCellPx()) ?: TILE_LABEL_MIN_SP
+                    v.setTextViewTextSize(R.id.cad_label, TypedValue.COMPLEX_UNIT_PX, sp * density * scale)
                 }
-                v.setTextViewTextSize(R.id.cad_label, TypedValue.COMPLEX_UNIT_PX, sp * density * scale)
             }
             v.setTextViewText(R.id.cad_label, cadLabel)
             v.setTextViewText(R.id.cad_value, cadText)
@@ -380,6 +378,10 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             when {
                 s.ergActive -> v.setTextViewText(R.id.target_label, context.getString(R.string.target_erg) + pct)
                 pct.isNotEmpty() -> v.setTextViewText(R.id.target_label, context.getString(R.string.target) + pct)
+            }
+            // A plain "Cel" takes turns with "mocy" (the label reads "Cel mocy" over two frames).
+            if (!karoo && !s.ergActive && pct.isEmpty() && !(s.targetShowsRange && band != null) && labelFrame() == 1) {
+                v.setTextViewText(R.id.target_label, context.getString(R.string.target_power_word))
             }
             v.setOnClickPendingIntent(R.id.target_tile, targetToggleIntent)
         }
@@ -1289,6 +1291,9 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
 
     private val classicPaint = TextPaint(TextPaint.ANTI_ALIAS_FLAG).apply { typeface = Typeface.DEFAULT_BOLD }
 
+    /** Which of two labels taking turns shows now: each stays [LABEL_TURN_MS]. */
+    private fun labelFrame(): Int = ((SystemClock.elapsedRealtime() / LABEL_TURN_MS) % 2).toInt()
+
     /** Room for text inside a classic tile (8dp padding each side). */
     private fun classicCellPx(): Float {
         val tiles = ((if (cadTileShown) 3f else 2f) - (if (lapHiddenForJump || leftTileGone) 1f else 0f) - (if (rightTileGone) 1f else 0f)).coerceAtLeast(1f)
@@ -1402,6 +1407,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         /** Classic tile labels, and the smallest they shrink to before shortening. */
         private const val TILE_LABEL_SP = 14f
         private const val TILE_LABEL_MIN_SP = 12f
+        /** How long each of two alternating tile labels stays ("Kadencja" / "85–90"). */
+        private const val LABEL_TURN_MS = 3000L
         private const val SEP = " \u00b7 "
         /** Redraws (about seconds) a scrolled note waits at its start and at its end. */
         private const val HOLD = 2
