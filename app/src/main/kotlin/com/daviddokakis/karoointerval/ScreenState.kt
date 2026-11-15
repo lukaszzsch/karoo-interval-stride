@@ -67,6 +67,10 @@ data class ScreenState(
     // Karoo's own lap data, shown when no workout is loaded (free ride).
     val lapNumber: Int? = null,
     val lapTimeSec: Int? = null,
+    /** The ride's elapsed time (Karoo's), for the free-ride clock. */
+    val rideTimeSec: Int? = null,
+    /** Free-ride clock shows the ride's time instead of the lap's (tap to toggle, remembered). */
+    val freeClockShowsRide: Boolean = false,
     val lapPowerAvg: Int? = null,
     /** Normalised power of Karoo's current lap (free ride). */
     val freeLapNp: Int? = null,

@@ -66,6 +66,11 @@ class PlanStore private constructor(context: Context) {
         get() = prefs.getBoolean("clock_elapsed", false)
         set(value) = prefs.edit().putBoolean("clock_elapsed", value).apply()
 
+    /** The free-ride clock shows the ride's time instead of the lap's (remembered). */
+    var freeClockShowsRide: Boolean
+        get() = prefs.getBoolean("free_clock_ride", false)
+        set(value) = prefs.edit().putBoolean("free_clock_ride", value).apply()
+
     /** Lap tile shows NP instead of the lap average (remembered between rides). */
     var lapShowsNp: Boolean
         get() = prefs.getBoolean(KEY_LAP_NP, false)

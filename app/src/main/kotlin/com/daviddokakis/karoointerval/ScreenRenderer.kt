@@ -100,6 +100,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     private val leftTileIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_LEFT_TILE, 20) }
     private val rightTileIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_RIGHT_TILE, 21) }
     private val infoIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_INFO, 22) }
+    private val freeClockIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_FREE_CLOCK, 23) }
     private val rateIntent: PendingIntent by lazy {
         PendingIntent.getActivity(
             context,
@@ -123,8 +124,9 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         // Debug builds show demo data; in release builds this returns the real state unchanged.
         val s = DemoData.apply(state)
         useAppearance(s.appearance)
-        if (s.plan == null) return renderFreeRide(s)
-        if (s.infoOpen) return renderInfo(s, s.plan)
+        if (s.infoOpen && s.plan != null) return renderInfo(s, s.plan)
+        // No workout, or the workout is done and the ride goes on: the free-ride screen.
+        if (s.plan == null || s.finished) return renderFreeRide(s)
         // The Gauge watts mode has its own layout; the other four share the classic one. Each has
         // a "Karoo native styling" twin (setting on the Account page).
         val gaugeMode = s.wattsMode == WattsMode.GAUGE
@@ -964,10 +966,18 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             v.setViewVisibility(R.id.paused_box, View.GONE)
             if (karoo) v.setViewVisibility(R.id.icon_timer, View.VISIBLE)
             if (karoo) v.setViewVisibility(R.id.paused_spacer, View.GONE)
-            v.setTextViewText(R.id.interval_label, s.lapNumber?.let { context.getString(R.string.lap_number, it) } ?: "")
-            v.setTextColor(R.id.interval_label, color(if (karoo) R.color.text else R.color.text_secondary))
+            // "Okrążenie 3" (or "Czas jazdy" with the ride's clock); after a finished workout with
+            // its rating ("· RPE 7 · Dobrze" or "· dotknij, by ocenić"), tap to rate.
+            val clockLabel = if (s.freeClockShowsRide) context.getString(R.string.ride_time) else s.lapNumber?.let { context.getString(R.string.lap_number, it) }
+            val done = s.plan != null && s.finished
+            val label = if (done) listOfNotNull(clockLabel, s.ratingSummary ?: context.getString(R.string.rate_prompt_short)).joinToString(SEP) else clockLabel ?: ""
+            v.setTextViewText(R.id.interval_label, label)
+            v.setTextColor(R.id.interval_label, color(if (done && s.ratingSummary == null) R.color.watts_in_range else if (karoo) R.color.text else R.color.text_secondary))
+            if (done) v.setOnClickPendingIntent(R.id.interval_label, rateIntent)
         }
-        v.setTextViewText(R.id.time_left, s.lapTimeSec?.let(::formatClock) ?: "--:--")
+        // Tap the clock: the lap's time ↔ the ride's time.
+        v.setTextViewText(R.id.time_left, (if (s.freeClockShowsRide) s.rideTimeSec else s.lapTimeSec)?.let(::formatClock) ?: "--:--")
+        v.setOnClickPendingIntent(R.id.time_left, freeClockIntent)
         // No interval to fill: the bar keeps its space so the tiles stay where they are.
         v.setViewVisibility(R.id.interval_progress, View.INVISIBLE)
 

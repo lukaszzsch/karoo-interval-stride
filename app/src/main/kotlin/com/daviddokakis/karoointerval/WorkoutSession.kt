@@ -196,6 +196,7 @@ class WorkoutSession(
             _state.update { it.copy(lapNumber = v, freeLapNp = freeLapNp.value) }
         }
         collectInt(DataType.Type.ELAPSED_TIME_LAP, divideBy = 1000) { v -> _state.update { it.copy(lapTimeSec = v) } }
+        collectInt(DataType.Type.ELAPSED_TIME, divideBy = 1000) { v -> _state.update { it.copy(rideTimeSec = v) } }
         collectInt(DataType.Type.POWER_LAP) { v -> _state.update { it.copy(lapPowerAvg = v) } }
         collectInt(DataType.Type.ELAPSED_TIME_LAST_LAP, divideBy = 1000) { v -> _state.update { it.copy(lastLapTimeSec = v) } }
         collectInt(DataType.Type.AVERAGE_POWER_LAST_LAP) { v -> _state.update { it.copy(lastLapPowerAvg = v) } }
@@ -234,7 +235,7 @@ class WorkoutSession(
         scope.launch { tickLoop() }
         scope.launch { store.karooStyle.collect { on -> _state.update { it.copy(karooStyle = on) } } }
         scope.launch { store.appearance.collect { a -> _state.update { it.copy(appearance = a) } } }
-        _state.update { it.copy(wattsMode = store.wattsMode, targetShowsRange = store.targetShowsRange, lapShowsNp = store.lapShowsNp, hrShowsLap = store.hrShowsLap, clockShowsElapsed = store.clockShowsElapsed, freeChartSpan = store.freeChartSpan, freePowerTile = store.freePowerTile, freeHrTile = store.freeHrTile, leftTileIndex = store.leftTileIndex, rightTileIndex = store.rightTileIndex) }
+        _state.update { it.copy(wattsMode = store.wattsMode, targetShowsRange = store.targetShowsRange, lapShowsNp = store.lapShowsNp, hrShowsLap = store.hrShowsLap, clockShowsElapsed = store.clockShowsElapsed, freeClockShowsRide = store.freeClockShowsRide, freeChartSpan = store.freeChartSpan, freePowerTile = store.freePowerTile, freeHrTile = store.freeHrTile, leftTileIndex = store.leftTileIndex, rightTileIndex = store.rightTileIndex) }
     }
 
     /** Today's intensity in % (targets and ERG follow it). */
@@ -456,6 +457,15 @@ class WorkoutSession(
             val up = !_state.value.clockShowsElapsed
             store.clockShowsElapsed = up
             _state.update { it.copy(clockShowsElapsed = up) }
+        }
+    }
+
+    /** Tap on the free-ride clock: the lap's time ↔ the ride's time. */
+    fun toggleFreeClock() {
+        scope.launch {
+            val ride = !_state.value.freeClockShowsRide
+            store.freeClockShowsRide = ride
+            _state.update { it.copy(freeClockShowsRide = ride) }
         }
     }
 

@@ -29,6 +29,7 @@ class ActionReceiver : BroadcastReceiver() {
             ACTION_LEFT_TILE -> session.cycleTile(left = true)
             ACTION_RIGHT_TILE -> session.cycleTile(left = false)
             ACTION_TOGGLE_INFO -> session.toggleInfo()
+            ACTION_FREE_CLOCK -> session.toggleFreeClock()
         }
     }
 
@@ -53,5 +54,6 @@ class ActionReceiver : BroadcastReceiver() {
         const val ACTION_LEFT_TILE = "com.daviddokakis.karoointerval.LEFT_TILE"
         const val ACTION_RIGHT_TILE = "com.daviddokakis.karoointerval.RIGHT_TILE"
         const val ACTION_TOGGLE_INFO = "com.daviddokakis.karoointerval.TOGGLE_INFO"
+        const val ACTION_FREE_CLOCK = "com.daviddokakis.karoointerval.FREE_CLOCK"
     }
 }
