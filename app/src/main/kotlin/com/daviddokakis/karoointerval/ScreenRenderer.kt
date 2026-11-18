@@ -1029,7 +1029,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         v.setViewVisibility(R.id.lap_tile, View.VISIBLE)
         v.setViewVisibility(R.id.cad_tile, if (cadTileShown) View.VISIBLE else View.GONE)
         if (cadTileShown) {
-            v.setTextViewText(R.id.cad_label, context.getString(R.string.cadence))
+            // Sized to fit the narrow third tile, like the workout's ("Kaden…" was cut off).
+            setTileLabel(v, R.id.cad_label, context.getString(R.string.cadence))
             v.setTextViewText(R.id.cad_value, cadText)
             v.setTextColor(R.id.cad_value, color(R.color.text))
             v.setTextColor(R.id.cad_label, labelColor)
