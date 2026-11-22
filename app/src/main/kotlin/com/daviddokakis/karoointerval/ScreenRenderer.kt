@@ -1418,7 +1418,9 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         val palette = s.zonePalette
         val i = palette.hrIndex(zone)
         setBg(v, R.id.hr_tile, palette.tiles[i])
-        val ink = if (android.graphics.Color.luminance(color(palette.fills[i])) > 0.4f) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
+        // Whichever of black and white contrasts more (WCAG): black on grey, blue, green, yellow,
+        // orange; white only on the dark red / purple.
+        val ink = if (android.graphics.Color.luminance(color(palette.fills[i])) > 0.18f) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
         v.setTextColor(R.id.hr, ink)
         v.setTextColor(R.id.hr_label, ink)
     }
