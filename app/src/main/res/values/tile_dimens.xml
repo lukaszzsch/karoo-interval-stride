@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Classic tile labels: a fixed line height, so a label shrunk to fit (taking turns,
+         e.g. "Średnia" / "okrążenia") never moves the number under it. -->
+    <dimen name="tile_label_height">18sp</dimen>
+</resources>

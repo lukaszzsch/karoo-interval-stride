@@ -147,7 +147,8 @@
                 <TextView
                     android:id="@+id/lap_avg_label"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="@dimen/tile_label_height"
+                    android:gravity="center_vertical"
                     android:text="@string/lap_avg"
                     android:textColor="@color/text_secondary"
                     android:textStyle="bold"
@@ -197,7 +198,8 @@
                     <TextView
                         android:id="@+id/hr_label"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        android:layout_height="@dimen/tile_label_height"
+                    android:gravity="center_vertical"
                         android:contentDescription="@string/cd_heart_rate"
                         android:text="@string/hr"
                         android:textColor="@color/text_secondary"
@@ -235,7 +237,8 @@
                 <TextView
                     android:id="@+id/cad_label"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="@dimen/tile_label_height"
+                    android:gravity="center_vertical"
                     android:text="@string/cadence"
                     android:textColor="@color/text_secondary"
                     android:textStyle="bold"
