@@ -374,8 +374,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             v.setOnClickPendingIntent(R.id.cad_tile, cadTileIntent)
             // Against a target the whole tile takes a strong colour (its background is set after
             // the tile style, below) with white text: readable at a glance, in sunlight too.
-            v.setTextColor(R.id.cad_value, color(if (cadState != null) R.color.cad_on else R.color.text))
-            v.setTextColor(R.id.cad_label, if (cadState != null) color(R.color.cad_on) else labelColor)
+            v.setTextColor(R.id.cad_value, if (cadState != null) filledInk(s) else color(R.color.text))
+            v.setTextColor(R.id.cad_label, if (cadState != null) filledInk(s) else labelColor)
         }
         // A fixed-watts interval shows its watts (what ERG holds), never the tolerance band around them.
         val band = s.shownRange
@@ -571,8 +571,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             // Filled like the cadence tile, white text (after the custom tiles set their colours).
             setBg(v, R.id.lap_tile, when (lapState) { -1 -> R.drawable.bg_cad_under; 1 -> R.drawable.bg_cad_over; else -> R.drawable.bg_cad_in })
             v.setTextViewText(R.id.lap_avg, lapText)
-            v.setTextColor(R.id.lap_avg, color(R.color.cad_on))
-            v.setTextColor(R.id.lap_avg_label, color(R.color.cad_on))
+            v.setTextColor(R.id.lap_avg, filledInk(s))
+            v.setTextColor(R.id.lap_avg_label, filledInk(s))
         }
         if (tilesRowGone) v.setViewVisibility(R.id.tiles_row, View.GONE)
 
@@ -1408,6 +1408,10 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     private var hrText = ""
     private var freeHrShown: Int? = null
 
+    /** Text on the filled cadence and lap tiles (Settings › Napisy na kolorowych kafelkach). */
+    private fun filledInk(s: ScreenState): Int =
+        if (s.filledText == FilledText.BLACK) 0xFF000000.toInt() else color(R.color.cad_on)
+
     /**
      * Settings › Tło kafelka tętna: the HR tile filled with the zone colour of [hr] (Karoo or
      * Garmin / Zwift palette), black or white text, whichever reads better on it.
@@ -1418,9 +1422,12 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         val palette = s.zonePalette
         val i = palette.hrIndex(zone)
         setBg(v, R.id.hr_tile, palette.tiles[i])
-        // Whichever of black and white contrasts more (WCAG): black on grey, blue, green, yellow,
-        // orange; white only on the dark red / purple.
-        val ink = if (android.graphics.Color.luminance(color(palette.fills[i])) > 0.18f) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
+        val ink = when (s.filledText) {
+            FilledText.WHITE -> 0xFFFFFFFF.toInt()
+            FilledText.BLACK -> 0xFF000000.toInt()
+            // Whichever of black and white contrasts more (WCAG).
+            FilledText.AUTO -> if (android.graphics.Color.luminance(color(palette.fills[i])) > 0.18f) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
+        }
         v.setTextColor(R.id.hr, ink)
         v.setTextColor(R.id.hr_label, ink)
     }

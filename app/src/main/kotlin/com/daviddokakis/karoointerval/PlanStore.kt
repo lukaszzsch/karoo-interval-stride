@@ -141,6 +141,17 @@ class PlanStore private constructor(context: Context) {
         _zonePalette.value = value
     }
 
+    private val _filledText = MutableStateFlow(
+        FilledText.entries.firstOrNull { it.name == prefs.getString("filled_text", null) } ?: FilledText.WHITE,
+    )
+    /** Text on filled (coloured) tiles. */
+    val filledText: StateFlow<FilledText> = _filledText
+
+    fun setFilledText(value: FilledText) {
+        prefs.edit().putString("filled_text", value.name).apply()
+        _filledText.value = value
+    }
+
     private val _hrTileZone = MutableStateFlow(prefs.getBoolean("hr_tile_zone", false))
     /** HR tile filled with the heart rate zone's colour. */
     val hrTileZone: StateFlow<Boolean> = _hrTileZone

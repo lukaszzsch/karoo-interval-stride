@@ -108,6 +108,8 @@ data class ScreenState(
     val gaugeRedOutside: Boolean = false,
     /** HR tile filled with the heart rate zone's colour (Settings). */
     val hrTileZone: Boolean = false,
+    /** Text on filled tiles (Settings). */
+    val filledText: FilledText = FilledText.WHITE,
     /** Power zone colours in use (Settings), so a change redraws the field. */
     val zonePalette: ZonePalette = ZonePalette.KAROO,
     /** FTP from the Karoo rider profile, used when the plan has none. */

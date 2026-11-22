@@ -150,6 +150,17 @@ class SettingsActivity : AppearanceActivity() {
         form.addView(settingsHelp(getString(R.string.hr_tile_zone_help)))
         form.addView(settingsDivider())
 
+        // Text on filled tiles: white / black / auto
+        form.addView(settingsHeading(R.drawable.ic_style, getString(R.string.filled_text)))
+        form.addView(
+            segmented(FilledText.entries.map { it.label to it }, store.filledText.value) { picked ->
+                store.setFilledText(picked)
+                render()
+            },
+        )
+        form.addView(settingsHelp(getString(R.string.filled_text_help)))
+        form.addView(settingsDivider())
+
         // Left and right tile of the workout screen: which metrics each goes through (a tap shows the next)
         tileSection(R.string.left_tile, R.string.left_tile_help, store.leftTile.value, TileMetric.LEFT_DEFAULT) { store.setLeftTile(it) }
         tileSection(R.string.right_tile, R.string.right_tile_help, store.rightTile.value, TileMetric.RIGHT_DEFAULT) { store.setRightTile(it) }
