@@ -141,6 +141,15 @@ class PlanStore private constructor(context: Context) {
         _zonePalette.value = value
     }
 
+    private val _hrTileZone = MutableStateFlow(prefs.getBoolean("hr_tile_zone", false))
+    /** HR tile filled with the heart rate zone's colour. */
+    val hrTileZone: StateFlow<Boolean> = _hrTileZone
+
+    fun setHrTileZone(on: Boolean) {
+        prefs.edit().putBoolean("hr_tile_zone", on).apply()
+        _hrTileZone.value = on
+    }
+
     private val _gaugeRedOutside = MutableStateFlow(prefs.getBoolean("gauge_red_outside", false))
     /** Garmin style gauge: red outside the target band instead of grey. */
     val gaugeRedOutside: StateFlow<Boolean> = _gaugeRedOutside

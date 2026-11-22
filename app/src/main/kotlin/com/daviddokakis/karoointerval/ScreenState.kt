@@ -106,6 +106,8 @@ data class ScreenState(
     val rideCadence: Int? = null,
     /** Garmin style gauge: red outside the target band (Settings). */
     val gaugeRedOutside: Boolean = false,
+    /** HR tile filled with the heart rate zone's colour (Settings). */
+    val hrTileZone: Boolean = false,
     /** Power zone colours in use (Settings), so a change redraws the field. */
     val zonePalette: ZonePalette = ZonePalette.KAROO,
     /** FTP from the Karoo rider profile, used when the plan has none. */

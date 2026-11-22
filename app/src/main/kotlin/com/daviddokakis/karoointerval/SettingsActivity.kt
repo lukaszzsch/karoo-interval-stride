@@ -139,6 +139,17 @@ class SettingsActivity : AppearanceActivity() {
         form.addView(settingsHelp(getString(R.string.tiles_style_help)))
         form.addView(settingsDivider())
 
+        // HR tile: plain / filled with the heart rate zone colour
+        form.addView(settingsHeading(R.drawable.ic_style, getString(R.string.hr_tile_zone)))
+        form.addView(
+            segmented(listOf(R.string.hr_tile_plain to false, R.string.hr_tile_zone_on to true), store.hrTileZone.value) { on ->
+                store.setHrTileZone(on)
+                render()
+            },
+        )
+        form.addView(settingsHelp(getString(R.string.hr_tile_zone_help)))
+        form.addView(settingsDivider())
+
         // Left and right tile of the workout screen: which metrics each goes through (a tap shows the next)
         tileSection(R.string.left_tile, R.string.left_tile_help, store.leftTile.value, TileMetric.LEFT_DEFAULT) { store.setLeftTile(it) }
         tileSection(R.string.right_tile, R.string.right_tile_help, store.rightTile.value, TileMetric.RIGHT_DEFAULT) { store.setRightTile(it) }

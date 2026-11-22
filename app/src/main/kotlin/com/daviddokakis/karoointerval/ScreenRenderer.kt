@@ -563,6 +563,10 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             setBg(v, R.id.cad_tile, when (cadState) { -1 -> R.drawable.bg_cad_under; 1 -> R.drawable.bg_cad_over; else -> R.drawable.bg_cad_in })
         }
         applyCustomTiles(v, s, leftShow, rightShow, gaugeMode, karoo, labelColor)
+        // The HR tile in its heart rate zone colour (Settings), when it shows heart rate.
+        if (gaugeMode && top == TopRow.TARGET && (rightShow?.metric ?: TileMetric.HEART_RATE) == TileMetric.HEART_RATE) {
+            applyHrZoneTile(v, s, s.heartRate)
+        }
         if (lapState != null) {
             // Filled like the cadence tile, white text (after the custom tiles set their colours).
             setBg(v, R.id.lap_tile, when (lapState) { -1 -> R.drawable.bg_cad_under; 1 -> R.drawable.bg_cad_over; else -> R.drawable.bg_cad_in })
@@ -926,6 +930,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             else -> s.heartRate
         }
         hrText = freeHr?.toString() ?: "--"
+        freeHrShown = freeHr
         cadText = when (s.cadTile) {
             1 -> s.lapCadence
             2 -> s.rideCadence
@@ -1070,6 +1075,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
 
         applyTopRow(v, s, top, gaugeMode, karoo, free = true)
         applyTileStyle(v, s, gaugeMode)
+        if (gaugeMode) applyHrZoneTile(v, s, freeHrShown)
 
         // Bottom: the power chart in the space of the next box (48 dp + 6 dp) and the profile.
         v.setViewVisibility(R.id.next_box, View.GONE)
@@ -1400,6 +1406,22 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     private var lapText = ""
     private var targetText = ""
     private var hrText = ""
+    private var freeHrShown: Int? = null
+
+    /**
+     * Settings › Tło kafelka tętna: the HR tile filled with the zone colour of [hr] (Karoo or
+     * Garmin / Zwift palette), black or white text, whichever reads better on it.
+     */
+    private fun applyHrZoneTile(v: RemoteViews, s: ScreenState, hr: Int?) {
+        if (!s.hrTileZone || s.paused) return
+        val zone = s.zoneOf(hr?.takeIf { it > 0 }) ?: return
+        val palette = s.zonePalette
+        val i = palette.hrIndex(zone)
+        setBg(v, R.id.hr_tile, palette.tiles[i])
+        val ink = if (android.graphics.Color.luminance(color(palette.fills[i])) > 0.4f) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
+        v.setTextColor(R.id.hr, ink)
+        v.setTextColor(R.id.hr_label, ink)
+    }
     private var cadText = ""
     private var cadTileShown = false
     /** Cadence reported at least once: the free-ride tile stays (shows -- when it drops to 0). */

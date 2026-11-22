@@ -213,6 +213,7 @@ class WorkoutSession(
         scope.launch { store.tileOutline.collect { on -> _state.update { it.copy(tileOutline = on) } } }
         scope.launch { store.zonePalette.collect { p -> _state.update { it.copy(zonePalette = p) } } }
         scope.launch { store.gaugeRedOutside.collect { on -> _state.update { it.copy(gaugeRedOutside = on) } } }
+        scope.launch { store.hrTileZone.collect { on -> _state.update { it.copy(hrTileZone = on) } } }
         collectInt(DataType.Type.CADENCE_LAP) { v -> _state.update { it.copy(lapCadence = v?.takeIf { c -> c > 0 }) } }
         collectInt(DataType.Type.AVERAGE_CADENCE) { v -> _state.update { it.copy(rideCadence = v?.takeIf { c -> c > 0 }) } }
         _state.update { it.copy(cadTile = store.cadTile) }

@@ -79,6 +79,10 @@
     <string name="ride_tss">TSS jazdy</string>
     <string name="lap_cadence">Kad. okr.</string>
     <string name="ride_cadence">Kad. jazdy</string>
+    <string name="hr_tile_zone">Tło kafelka tętna</string>
+    <string name="hr_tile_plain">Zwykłe</string>
+    <string name="hr_tile_zone_on">Kolor strefy</string>
+    <string name="hr_tile_zone_help">Kafelek tętna wypełniony kolorem bieżącej strefy tętna z profilu Karoo, w palecie wybranej w „Kolory stref mocy” (Garmin: szary, niebieski, zielony, pomarańczowy, czerwony). Działa na ekranie z łukiem, gdy kafelek pokazuje tętno.</string>
     <string name="zone_palette">Kolory stref mocy</string>
     <string name="zone_palette_help">Kolory stref na wykresie treningu, wykresie i łuku bez treningu, w szczegółach treningu i przy watach w kolorze strefy. Karoo: miętowy, zielony, żółty, łososiowy, czerwony, fioletowy. Garmin / Zwift: szary, niebieski, zielony, żółty, pomarańczowy, czerwony.</string>
     <string name="palette_karoo">Karoo</string>
