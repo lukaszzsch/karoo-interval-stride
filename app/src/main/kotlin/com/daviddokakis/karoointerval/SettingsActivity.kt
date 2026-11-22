@@ -154,6 +154,28 @@ class SettingsActivity : AppearanceActivity() {
         form.addView(settingsHelp(getString(R.string.update_notices_help)))
         form.addView(settingsDivider())
 
+        // Power zone colours: Karoo / Garmin-Zwift
+        form.addView(settingsHeading(R.drawable.ic_bolt_filled, getString(R.string.zone_palette)))
+        form.addView(
+            segmented(ZonePalette.entries.map { it.label to it }, store.zonePalette.value) { picked ->
+                store.setZonePalette(picked)
+                render()
+            },
+        )
+        form.addView(settingsHelp(getString(R.string.zone_palette_help)))
+        form.addView(settingsDivider())
+
+        // Gauge outside the target: grey / red (Garmin style)
+        form.addView(settingsHeading(R.drawable.ic_bolt_filled, getString(R.string.gauge_outside)))
+        form.addView(
+            segmented(listOf(R.string.gauge_outside_grey to false, R.string.gauge_outside_red to true), store.gaugeRedOutside.value) { on ->
+                store.setGaugeRedOutside(on)
+                render()
+            },
+        )
+        form.addView(settingsHelp(getString(R.string.gauge_outside_help)))
+        form.addView(settingsDivider())
+
         // Top row: Auto / Heart rate / Cadence / Target
         form.addView(settingsHeading(R.drawable.ic_heart, getString(R.string.top_row)))
         form.addView(

@@ -77,6 +77,16 @@
     <string name="ride_np">NP jazdy</string>
     <string name="ride_if">IF jazdy</string>
     <string name="ride_tss">TSS jazdy</string>
+    <string name="lap_cadence">Kad. okr.</string>
+    <string name="ride_cadence">Kad. jazdy</string>
+    <string name="zone_palette">Kolory stref mocy</string>
+    <string name="zone_palette_help">Kolory stref na wykresie treningu, wykresie i łuku bez treningu, w szczegółach treningu i przy watach w kolorze strefy. Karoo: miętowy, zielony, żółty, łososiowy, czerwony, fioletowy. Garmin / Zwift: szary, niebieski, zielony, żółty, pomarańczowy, czerwony.</string>
+    <string name="palette_karoo">Karoo</string>
+    <string name="palette_zwift">Garmin / Zwift</string>
+    <string name="gauge_outside">Wskaźnik poza celem</string>
+    <string name="gauge_outside_grey">Szary</string>
+    <string name="gauge_outside_red">Czerwony</string>
+    <string name="gauge_outside_help">W treningu łuk wskaźnika poza zielonym zakresem celu: szary jak teraz albo czerwony jak w Garminie.</string>
     <string name="halfway_title">Połowa treningu</string>
     <string name="halfway_detail">Zostało %1$s, czas zawracać</string>
     <string name="erg_alert_connected">ERG połączony</string>

@@ -124,6 +124,32 @@ class PlanStore private constructor(context: Context) {
         _cadenceSmoothing.value = value
     }
 
+    /** Cadence tile: 0 now, 1 lap average, 2 ride average (remembered). */
+    var cadTile: Int
+        get() = prefs.getInt("cad_tile", 0)
+        set(value) = prefs.edit().putInt("cad_tile", value).apply()
+
+    private val _zonePalette = MutableStateFlow(
+        ZonePalette.entries.firstOrNull { it.name == prefs.getString("zone_palette", null) } ?: ZonePalette.KAROO,
+    ).also { ZonePalette.current = it.value }
+    /** Power zone colours: the Karoo's or Garmin / Zwift style. */
+    val zonePalette: StateFlow<ZonePalette> = _zonePalette
+
+    fun setZonePalette(value: ZonePalette) {
+        prefs.edit().putString("zone_palette", value.name).apply()
+        ZonePalette.current = value
+        _zonePalette.value = value
+    }
+
+    private val _gaugeRedOutside = MutableStateFlow(prefs.getBoolean("gauge_red_outside", false))
+    /** Garmin style gauge: red outside the target band instead of grey. */
+    val gaugeRedOutside: StateFlow<Boolean> = _gaugeRedOutside
+
+    fun setGaugeRedOutside(on: Boolean) {
+        prefs.edit().putBoolean("gauge_red_outside", on).apply()
+        _gaugeRedOutside.value = on
+    }
+
     private val _tileOutline = MutableStateFlow(prefs.getBoolean("tile_outline", false))
     /** Tiles drawn as an outline instead of a grey fill. */
     val tileOutline: StateFlow<Boolean> = _tileOutline

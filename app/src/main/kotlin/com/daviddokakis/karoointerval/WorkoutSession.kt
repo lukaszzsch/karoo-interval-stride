@@ -211,6 +211,11 @@ class WorkoutSession(
             }
         }
         scope.launch { store.tileOutline.collect { on -> _state.update { it.copy(tileOutline = on) } } }
+        scope.launch { store.zonePalette.collect { p -> _state.update { it.copy(zonePalette = p) } } }
+        scope.launch { store.gaugeRedOutside.collect { on -> _state.update { it.copy(gaugeRedOutside = on) } } }
+        collectInt(DataType.Type.CADENCE_LAP) { v -> _state.update { it.copy(lapCadence = v?.takeIf { c -> c > 0 }) } }
+        collectInt(DataType.Type.AVERAGE_CADENCE) { v -> _state.update { it.copy(rideCadence = v?.takeIf { c -> c > 0 }) } }
+        _state.update { it.copy(cadTile = store.cadTile) }
         collectInt(DataType.Type.CALORIES) { v -> _state.update { it.copy(calories = v) } }
         scope.launch {
             karoo.streamDataFlow(DataType.Type.SPEED).collect { s -> _state.update { it.copy(speedMs = s.single()) } }
@@ -510,6 +515,15 @@ class WorkoutSession(
             val v = (_state.value.freePowerTile + 1) % FREE_POWER_VALUES
             store.freePowerTile = v
             _state.update { it.copy(freePowerTile = v) }
+        }
+    }
+
+    /** Tap on the cadence tile: cadence now → lap average → ride average. */
+    fun toggleCadTile() {
+        scope.launch {
+            val v = (_state.value.cadTile + 1) % 3
+            store.cadTile = v
+            _state.update { it.copy(cadTile = v) }
         }
     }
 

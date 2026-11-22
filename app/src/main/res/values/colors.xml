@@ -100,4 +100,6 @@
     <color name="cad_bg_under">#FF1565C0</color>
     <color name="cad_bg_over">#FFC62828</color>
     <color name="cad_on">#FFFFFFFF</color>
+    <!-- Gauge arc outside the target band, Garmin style (Settings) -->
+    <color name="gauge_outside">#FFD32F2F</color>
 </resources>

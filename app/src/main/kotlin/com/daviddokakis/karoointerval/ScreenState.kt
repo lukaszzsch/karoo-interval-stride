@@ -100,6 +100,14 @@ data class ScreenState(
     val topRow: TopRow = TopRow.AUTO,
     /** Tiles as an outline instead of a grey fill. */
     val tileOutline: Boolean = false,
+    /** Cadence tile: 0 now, 1 lap average, 2 ride average (tap). */
+    val cadTile: Int = 0,
+    val lapCadence: Int? = null,
+    val rideCadence: Int? = null,
+    /** Garmin style gauge: red outside the target band (Settings). */
+    val gaugeRedOutside: Boolean = false,
+    /** Power zone colours in use (Settings), so a change redraws the field. */
+    val zonePalette: ZonePalette = ZonePalette.KAROO,
     /** FTP from the Karoo rider profile, used when the plan has none. */
     val profileFtp: Int? = null,
     /** A trainer profile (marked indoor, or one ERG runs in): the Karoo's start button starts the workout. */

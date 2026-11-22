@@ -223,7 +223,7 @@ class WorkoutDetailsActivity : AppearanceActivity() {
         /** Room above the picture for the tapped interval's bubble. */
         private const val BUBBLE_DP = 44
         private val DAY_FORMAT = DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.forLanguageTag("pl"))
-        val ZONE_COLORS = intArrayOf(R.color.pz1, R.color.pz2, R.color.pz3, R.color.pz4, R.color.pz5, R.color.pz6)
+        val ZONE_COLORS: IntArray get() = ZonePalette.current.fills
 
         /** "3 · 4:00 · 250 W · 100% · Z4" (a ramp "150→200 W", a range "180–200 W"). */
         fun stepLine(i: Int, st: PlanStep, ftp: Int?): String {

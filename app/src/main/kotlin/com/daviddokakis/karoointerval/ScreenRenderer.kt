@@ -96,6 +96,14 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     private val freeChartIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_FREE_CHART, 17) }
     private val freePowerIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_FREE_POWER, 18) }
     private val freeHrIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_FREE_HR, 19) }
+    private val cadTileIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_CAD_TILE, 20) }
+
+    /** The cadence tile's label for the lap / ride average (null: cadence now). */
+    private fun cadTileLabel(s: ScreenState): String? = when (s.cadTile) {
+        1 -> context.getString(R.string.lap_cadence)
+        2 -> context.getString(R.string.ride_cadence)
+        else -> null
+    }
     private val wattsColorIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_WATTS_COLOR, 7) }
     private val leftTileIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_LEFT_TILE, 20) }
     private val rightTileIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_RIGHT_TILE, 21) }
@@ -148,9 +156,15 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         hrText = s.heartRate?.toString() ?: "--"
         // Cadence against the step's target: -1 too low, 0 in, 1 too high, null no target / no rpm.
         val liveCad = s.cadence?.takeIf { it > 0 }
-        val cadState = if (liveCad != null) s.currentStep?.cadenceState(liveCad) else null
+        // Tap the tile: cadence now → lap average → ride average. Only "now" is judged against
+        // the step's target (colours and arrows).
+        val cadState = if (liveCad != null && s.cadTile == 0) s.currentStep?.cadenceState(liveCad) else null
         // An arrow tells which way to go even when the colours don't show (sunlight): ↑ spin faster.
-        cadText = liveCad?.let { (when (cadState) { -1 -> "\u2191"; 1 -> "\u2193"; else -> "" }) + it } ?: "--"
+        cadText = when (s.cadTile) {
+            1 -> s.lapCadence?.toString() ?: "--"
+            2 -> s.rideCadence?.toString() ?: "--"
+            else -> liveCad?.let { (when (cadState) { -1 -> "\u2191"; 1 -> "\u2193"; else -> "" }) + it } ?: "--"
+        }
         cadTileShown = (s.cadence ?: 0) > 0 || s.currentStep?.cadenceRange != null
         // While a jump is chosen or counting down, the Target tile shows "174 → 189": the Lap avg
         // tile steps aside so it fits (the gauge layouts show the target in the top row instead).
@@ -202,6 +216,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             val gaugeW = (config.viewSize.first - 16 * density).toInt()
             if (gaugeW > 0) {
                 val extra = if (tilesRowGone) ((if (karoo) 54 else 52) * density * scale).toInt() else 0
+                gauge.redOutside = s.gaugeRedOutside
                 v.setImageViewBitmap(R.id.gauge, gauge.render(gaugeW, gaugeHeightPx(karoo, s.navigating) + extra, s.power3s, s.target, s.targetRange, color(wattsColor), karoo))
             }
         } else {
@@ -346,15 +361,17 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             // Classic: with a target the label takes turns, "Kadencja" then "85–90", each at the
             // tile-label size (a little smaller if the tile is too narrow).
             val cadLabel = if (karoo) {
-                step?.cadenceRange?.let { context.getString(R.string.cadence_target, it) } ?: context.getString(R.string.cadence)
+                cadTileLabel(s) ?: step?.cadenceRange?.let { context.getString(R.string.cadence_target, it) } ?: context.getString(R.string.cadence)
             } else {
-                (step?.cadenceRange?.takeIf { labelFrame() == 1 } ?: context.getString(R.string.cadence)).also { t ->
+                (cadTileLabel(s)?.let { labelTurns()[it]?.get(labelFrame()) ?: it }
+                    ?: step?.cadenceRange?.takeIf { labelFrame() == 1 } ?: context.getString(R.string.cadence)).also { t ->
                     val sp = fitSp(t, TILE_LABEL_SP, TILE_LABEL_MIN_SP, classicCellPx()) ?: TILE_LABEL_MIN_SP
                     v.setTextViewTextSize(R.id.cad_label, TypedValue.COMPLEX_UNIT_PX, sp * density * scale)
                 }
             }
             v.setTextViewText(R.id.cad_label, cadLabel)
             v.setTextViewText(R.id.cad_value, cadText)
+            v.setOnClickPendingIntent(R.id.cad_tile, cadTileIntent)
             // Against a target the whole tile takes a strong colour (its background is set after
             // the tile style, below) with white text: readable at a glance, in sunlight too.
             v.setTextColor(R.id.cad_value, color(if (cadState != null) R.color.cad_on else R.color.text))
@@ -909,7 +926,11 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             else -> s.heartRate
         }
         hrText = freeHr?.toString() ?: "--"
-        cadText = cadence?.toString() ?: "--"
+        cadText = when (s.cadTile) {
+            1 -> s.lapCadence
+            2 -> s.rideCadence
+            else -> cadence
+        }?.toString() ?: "--"
         cadTileShown = freeCadSeen
         val top = topOf(s, gaugeMode, free = true)
         if (top == TopRow.CADENCE) cadTileShown = false
@@ -932,7 +953,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         // Watts in the colour of the Karoo power zone they're in, like the range colours in a
         // workout: tap cycles plain, coloured number, coloured background, both, and the gauge.
         val zone = s.power3s?.takeIf { it > 0 && !s.paused }?.let { powerZoneIndex(it, s.powerZones, s.profileFtp) }
-        val zoneText = zone?.let { intArrayOf(R.color.zone_text_1, R.color.zone_text_2, R.color.zone_text_3, R.color.zone_text_4, R.color.zone_text_5, R.color.zone_text_6)[it] }
+        val zoneText = zone?.let { ZonePalette.current.texts[it] }
         val wattsColor = if (s.wattsMode.colorsText && zoneText != null) zoneText else R.color.text
         if (gaugeMode) {
             // No target band without a workout: the arc shows the 6 power zones, the zone you're in
@@ -946,7 +967,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             v.setTextColor(R.id.watts, color(wattsColor))
         }
         val upperBg = if (s.wattsMode.colorsBackground && zone != null) {
-            intArrayOf(R.drawable.bg_zone_1, R.drawable.bg_zone_2, R.drawable.bg_zone_3, R.drawable.bg_zone_4, R.drawable.bg_zone_5, R.drawable.bg_zone_6)[zone]
+            ZonePalette.current.backgrounds[zone]
         } else {
             0
         }
@@ -1030,8 +1051,9 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         v.setViewVisibility(R.id.cad_tile, if (cadTileShown) View.VISIBLE else View.GONE)
         if (cadTileShown) {
             // Sized to fit the narrow third tile, like the workout's ("Kaden…" was cut off).
-            setTileLabel(v, R.id.cad_label, context.getString(R.string.cadence))
+            setTileLabel(v, R.id.cad_label, cadTileLabel(s) ?: context.getString(R.string.cadence))
             v.setTextViewText(R.id.cad_value, cadText)
+            v.setOnClickPendingIntent(R.id.cad_tile, cadTileIntent)
             v.setTextColor(R.id.cad_value, color(R.color.text))
             v.setTextColor(R.id.cad_label, labelColor)
         }
@@ -1337,6 +1359,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             g(R.string.ride_hr) to listOf(g(R.string.heart_rate), ride),
             g(R.string.ride_if) to listOf("IF", ride),
             g(R.string.ride_tss) to listOf("TSS", ride),
+            g(R.string.lap_cadence) to listOf(g(R.string.cadence), lap),
+            g(R.string.ride_cadence) to listOf(g(R.string.cadence), ride),
             g(R.string.target_range) to listOf(g(R.string.turn_range), g(R.string.turn_target)),
             g(R.string.target) to listOf(g(R.string.target), g(R.string.target_power_word)),
         ).also { turns = it }

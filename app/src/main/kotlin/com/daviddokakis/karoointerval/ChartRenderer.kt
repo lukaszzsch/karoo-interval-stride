@@ -23,14 +23,13 @@ class ChartRenderer(private val context: Context) {
 
     private fun color(id: Int) = ContextCompat.getColor(context, id)
 
-    private val karooZoneColors = intArrayOf(R.color.pz1, R.color.pz2, R.color.pz3, R.color.pz4, R.color.pz5, R.color.pz6)
 
     /** A bar in the colour of the Karoo power zone of [watts]; grey without zones or an FTP. */
     private fun karooBar(watts: Int, zones: List<IntRange>, ftp: Int?): Zones.BarStyle =
         if (zones.size < 2 && (ftp == null || ftp <= 0)) {
             Zones.BarStyle(R.color.done, null)
         } else {
-            Zones.BarStyle(karooZoneColors[powerZoneIndex(watts, zones, ftp)], null)
+            Zones.BarStyle(ZonePalette.current.fills[powerZoneIndex(watts, zones, ftp)], null)
         }
 
     /** [c] mixed 60% toward white: how ridden parts of the profile look. */

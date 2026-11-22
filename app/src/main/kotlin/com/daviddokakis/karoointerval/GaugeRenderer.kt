@@ -91,6 +91,9 @@ class GaugeRenderer(private val context: Context) {
      * @param numberColor colour of the watts digits (plain text colour, or a range colour).
      * @param karooStyle Karoo native styling: Karoo green band and Karoo's number font.
      */
+    /** Garmin style: the arc red outside the target band instead of grey (Settings). */
+    var redOutside = false
+
     fun render(
         width: Int, height: Int, watts: Int?, target: Int?, range: IntRange?, numberColor: Int,
         karooStyle: Boolean = false,
@@ -111,10 +114,11 @@ class GaugeRenderer(private val context: Context) {
             strokeWidth = g.sw
             strokeCap = Paint.Cap.ROUND
         }
-        arc.color = color(R.color.gauge_track)
+        val center = target ?: range?.let { (it.first + it.last) / 2 }
+        // Garmin style (Settings): with a target the whole arc outside the green band is red.
+        arc.color = color(if (redOutside && center != null && center > 0 && range != null) R.color.gauge_outside else R.color.gauge_track)
         c.drawArc(oval, start, g.sweep, false, arc)
 
-        val center = target ?: range?.let { (it.first + it.last) / 2 }
         if (center != null && center > 0) {
             val bandHalf = range?.let { (it.last - it.first) / 2f } ?: 0f
             val half = max(center * 0.10f, bandHalf * 4f)
@@ -189,7 +193,7 @@ class GaugeRenderer(private val context: Context) {
             style = Paint.Style.STROKE
             strokeCap = Paint.Cap.BUTT
         }
-        val colors = intArrayOf(R.color.pz1, R.color.pz2, R.color.pz3, R.color.pz4, R.color.pz5, R.color.pz6)
+        val colors = ZonePalette.current.fills
         for (i in 0 until n) {
             arc.color = color(colors[i.coerceAtMost(colors.size - 1)])
             // The zone you're in: full width; the others thinner, kept on the arc's centre line.

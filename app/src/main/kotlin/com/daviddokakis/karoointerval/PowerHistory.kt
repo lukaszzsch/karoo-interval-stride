@@ -70,9 +70,7 @@ object PowerHistory {
  */
 class PowerHistoryChart(private val context: Context) {
 
-    private val zoneColors = intArrayOf(
-        R.color.pz1, R.color.pz2, R.color.pz3, R.color.pz4, R.color.pz5, R.color.pz6,
-    )
+    private val zoneColors: IntArray get() = ZonePalette.current.fills
 
     fun render(width: Int, height: Int, zones: List<IntRange>, ftp: Int?, span: Int, density: Float): Bitmap {
         val barW = 3f * density

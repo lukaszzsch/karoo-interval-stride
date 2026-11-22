@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Garmin / Zwift style power zone colours (grey, blue, green, yellow, orange, red). -->
+<resources>
+    <color name="zw1">#FF8C8C8C</color>
+    <color name="zw_text_1">#FF545454</color>
+    <color name="zw_bg_1">#FFC0C0C0</color>
+    <color name="zw_bg_1_clear">#00C0C0C0</color>
+    <color name="zw2">#FF3A8DDE</color>
+    <color name="zw_text_2">#FF235585</color>
+    <color name="zw_bg_2">#FF93C0ED</color>
+    <color name="zw_bg_2_clear">#0093C0ED</color>
+    <color name="zw3">#FF4CAF50</color>
+    <color name="zw_text_3">#FF2E6930</color>
+    <color name="zw_bg_3">#FF9DD39F</color>
+    <color name="zw_bg_3_clear">#009DD39F</color>
+    <color name="zw4">#FFF5C518</color>
+    <color name="zw_text_4">#FF93760E</color>
+    <color name="zw_bg_4">#FFFADF80</color>
+    <color name="zw_bg_4_clear">#00FADF80</color>
+    <color name="zw5">#FFF57C1F</color>
+    <color name="zw_text_5">#FF934A13</color>
+    <color name="zw_bg_5">#FFFAB784</color>
+    <color name="zw_bg_5_clear">#00FAB784</color>
+    <color name="zw6">#FFE53935</color>
+    <color name="zw_text_6">#FF892220</color>
+    <color name="zw_bg_6">#FFF19290</color>
+    <color name="zw_bg_6_clear">#00F19290</color>
+</resources>
