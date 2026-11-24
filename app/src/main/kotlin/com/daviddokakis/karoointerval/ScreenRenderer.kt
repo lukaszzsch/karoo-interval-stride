@@ -563,10 +563,21 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             setBg(v, R.id.cad_tile, when (cadState) { -1 -> R.drawable.bg_cad_under; 1 -> R.drawable.bg_cad_over; else -> R.drawable.bg_cad_in })
         }
         applyCustomTiles(v, s, leftShow, rightShow, gaugeMode, karoo, labelColor)
-        // The HR tile in its heart rate zone colour (Settings), when it shows heart rate.
-        if (gaugeMode && top == TopRow.TARGET && (rightShow?.metric ?: TileMetric.HEART_RATE) == TileMetric.HEART_RATE) {
-            applyHrZoneTile(v, s, s.heartRate)
+        // Tiles in their heart rate zone colour (Settings), whenever they show heart rate: the
+        // gauge's HR tile, the number layouts' Target tile (heart rate there when the target moved
+        // to the top row, or set so in Settings), and the left tile set to heart rate.
+        fun hrOf(m: TileMetric?): Int? = when (m) {
+            TileMetric.HEART_RATE -> s.heartRate
+            TileMetric.LAP_HR -> s.lapHrAvg
+            else -> null
         }
+        if (gaugeMode) {
+            if (top == TopRow.TARGET) hrOf(rightShow?.metric ?: TileMetric.HEART_RATE)?.let { applyHrZoneTile(v, s, it) }
+        } else {
+            val rightHr = if (rightShow == null) s.heartRate.takeIf { top == TopRow.TARGET } else hrOf(rightShow.metric)
+            rightHr?.let { applyHrZoneTile(v, s, it, R.id.target_tile, R.id.target, R.id.target_label) }
+        }
+        hrOf(leftShow?.metric)?.let { applyHrZoneTile(v, s, it, R.id.lap_tile, R.id.lap_avg, R.id.lap_avg_label) }
         if (lapState != null) {
             // Filled like the cadence tile, white text (after the custom tiles set their colours).
             setBg(v, R.id.lap_tile, when (lapState) { -1 -> R.drawable.bg_cad_under; 1 -> R.drawable.bg_cad_over; else -> R.drawable.bg_cad_in })
@@ -1426,20 +1437,20 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
      * Settings › Tło kafelka tętna: the HR tile filled with the zone colour of [hr] (Karoo or
      * Garmin / Zwift palette), black or white text, whichever reads better on it.
      */
-    private fun applyHrZoneTile(v: RemoteViews, s: ScreenState, hr: Int?) {
+    private fun applyHrZoneTile(v: RemoteViews, s: ScreenState, hr: Int?, tile: Int = R.id.hr_tile, value: Int = R.id.hr, label: Int = R.id.hr_label) {
         if (!s.hrTileZone || s.paused) return
         val zone = s.zoneOf(hr?.takeIf { it > 0 }) ?: return
         val palette = s.zonePalette
         val i = palette.hrIndex(zone)
-        setBg(v, R.id.hr_tile, palette.tiles[i])
+        setBg(v, tile, palette.tiles[i])
         val ink = when (s.filledText) {
             FilledText.WHITE -> 0xFFFFFFFF.toInt()
             FilledText.BLACK -> 0xFF000000.toInt()
             // Whichever of black and white contrasts more (WCAG).
             FilledText.AUTO -> if (android.graphics.Color.luminance(color(palette.fills[i])) > 0.18f) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
         }
-        v.setTextColor(R.id.hr, ink)
-        v.setTextColor(R.id.hr_label, ink)
+        v.setTextColor(value, ink)
+        v.setTextColor(label, ink)
     }
     private var cadText = ""
     private var cadTileShown = false
