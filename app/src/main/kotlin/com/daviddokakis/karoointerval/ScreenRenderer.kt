@@ -691,6 +691,9 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         TileMetric.TARGET -> s.target?.toString()
         TileMetric.TARGET_RANGE -> s.shownRange?.let { "${it.first}\u2013${it.last}" } ?: s.target?.toString()
         TileMetric.HEART_RATE -> s.heartRate?.toString()
+        // The interval's average: the workout marks a Karoo lap at each interval.
+        TileMetric.LAP_HR -> s.lapHrAvg?.toString()
+        TileMetric.DRIFT -> s.workoutDriftPct?.let(::formatDrift)
         TileMetric.CADENCE -> s.cadence?.takeIf { it > 0 }?.toString()
         TileMetric.CALORIES -> s.calories?.toString()
         TileMetric.SPEED -> s.speedMs?.let { String.format(java.util.Locale.forLanguageTag("pl"), "%.1f", it * if (s.imperial) 2.236936 else 3.6) }
@@ -757,8 +760,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
 
     /**
      * ⓘ (indoors): the whole workout so far, one picture: its name, where you are and how long it
-     * is, then ten tiles: time so far, time left, average power, NP, average heart rate and
-     * cadence, calories, max power, TSS and IF. ✕ in the top right; a tap anywhere closes it.
+     * is, then twelve tiles: time so far, time left, average power, NP, average heart rate and
+     * cadence, calories, max power, TSS, IF, heart rate drift and the lap's heart rate. ✕ in the top right; a tap anywhere closes it.
      */
     private fun renderInfo(s: ScreenState, plan: WorkoutPlan): RemoteViews {
         val layout = R.layout.field_info
@@ -808,7 +811,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         }
         c.drawText(cut(plan.name, titleP), pad, by + 15 * k, titleP)
         c.drawText(cut(context.getString(R.string.info_where, s.stepIndex + 1, s.stepCount, formatClock(plan.totalSec)), subP), pad, by + 31 * k, subP)
-        // The tiles: two columns, five rows, filling what's left of the field
+        // The tiles: two columns, six rows, filling what's left of the field
         val live = s.live
         val ftp = s.ftp
         val np = live?.np
@@ -825,11 +828,14 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             R.string.info_max_power to live?.maxPower?.toString(),
             R.string.info_tss to tss?.toString(),
             R.string.info_if to iF?.let { String.format(java.util.Locale.forLanguageTag("pl"), "%.2f", it) },
+            R.string.info_drift to live?.driftPct?.let(::formatDrift),
+            R.string.info_lap_hr to s.lapHrAvg?.toString(),
         )
+        val rows = (tiles.size + 1) / 2
         val gap = 4 * k
         val top = by + btn + 8 * k
         val tileW = (w - 2 * pad - gap) / 2f
-        val tileH = ((h - top - pad - 4 * gap) / 5f).coerceIn(20 * k, 64 * k)
+        val tileH = ((h - top - pad - (rows - 1) * gap) / rows.toFloat()).coerceIn(20 * k, 64 * k)
         val tileFill = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             if (s.tileOutline) {
                 style = android.graphics.Paint.Style.STROKE
@@ -921,15 +927,17 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             3 -> s.rideNp?.toString()
             4 -> s.rideIf?.let { String.format(java.util.Locale.forLanguageTag("pl"), "%.2f", it) }
             5 -> s.rideTss?.toString()
+            6 -> s.rideDriftPct?.let(::formatDrift)
             else -> s.lapPowerAvg?.toString()
         } ?: "--"
         targetText = s.lastLapPowerAvg?.takeIf { lastLapTime != null }?.toString() ?: "--"
         val freeHr = when (s.freeHrTile) {
             1 -> s.lapHrAvg
             2 -> s.rideAvgHr
+            3 -> null
             else -> s.heartRate
         }
-        hrText = freeHr?.toString() ?: "--"
+        hrText = if (s.freeHrTile == 3) s.rideDriftPct?.let(::formatDrift) ?: "--" else freeHr?.toString() ?: "--"
         freeHrShown = freeHr
         cadText = when (s.cadTile) {
             1 -> s.lapCadence
@@ -996,6 +1004,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
                     when (s.freeHrTile) {
                         1 -> R.string.lap_hr
                         2 -> R.string.ride_hr
+                        3 -> R.string.drift
                         else -> R.string.hr
                     },
                 ),
@@ -1046,6 +1055,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
                     3 -> R.string.ride_np
                     4 -> R.string.ride_if
                     5 -> R.string.ride_tss
+                    6 -> R.string.drift
                     else -> R.string.lap_avg
                 },
             ),

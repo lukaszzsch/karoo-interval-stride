@@ -34,6 +34,9 @@ data class ScreenState(
     /** Karoo's average heart rate this lap, and in the last lap (free ride). */
     val lapHrAvg: Int? = null,
     val lastLapHrAvg: Int? = null,
+    /** Heart rate drift (Pw:HR, %) so far: of the workout, and of the whole ride (free ride); null under 20 min. */
+    val workoutDriftPct: Double? = null,
+    val rideDriftPct: Double? = null,
     /** The ride is paused (Karoo's own pause). */
     val paused: Boolean = false,
     /** The workout is paused from this screen: interval clock and lap average stop, ride keeps recording. */
@@ -86,7 +89,7 @@ data class ScreenState(
     val waiting: Boolean = false,
     /** The finished workout's time, average power, NP and heart rate. */
     val summary: WorkoutSummary? = null,
-    /** Free ride: power tile value (0 lap avg, 1 lap NP, 2 ride avg) and HR tile (0 now, 1 lap, 2 ride). */
+    /** Free ride: power tile value (0 lap avg … 5 TSS, 6 drift) and HR tile (0 now, 1 lap, 2 ride, 3 drift). */
     val freePowerTile: Int = 0,
     val freeHrTile: Int = 0,
     /** The whole ride's average power and heart rate (Karoo). */
@@ -222,4 +225,5 @@ data class WorkoutLive(
     val avgCadence: Int?,
     val maxPower: Int?,
     val calories: Int?,
+    val driftPct: Double? = null,
 )

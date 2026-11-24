@@ -162,6 +162,8 @@ class WorkoutSession(
                 if (ride is RideState.Idle) {
                     resetToStart()
                     PowerHistory.clear()
+                    rideDrift.reset()
+                    _state.update { it.copy(rideDriftPct = null) }
                     // A changed version of the workout that came in mid-ride loads now.
                     heldPlan?.let { newer ->
                         heldPlan = null
@@ -511,7 +513,7 @@ class WorkoutSession(
         }
     }
 
-    /** Free ride: tap on the power tile: lap avg → lap NP → ride avg → ride NP → IF → TSS. */
+    /** Free ride: tap on the power tile: lap avg → lap NP → ride avg → ride NP → IF → TSS → drift. */
     fun toggleFreePower() {
         scope.launch {
             val v = (_state.value.freePowerTile + 1) % FREE_POWER_VALUES
@@ -529,10 +531,10 @@ class WorkoutSession(
         }
     }
 
-    /** Free ride: tap on the HR tile: heart rate now → lap avg → ride avg. */
+    /** Free ride: tap on the HR tile: heart rate now → lap avg → ride avg → drift (Pw:HR). */
     fun toggleFreeHr() {
         scope.launch {
-            val v = (_state.value.freeHrTile + 1) % 3
+            val v = (_state.value.freeHrTile + 1) % FREE_HR_VALUES
             store.freeHrTile = v
             _state.update { it.copy(freeHrTile = v) }
         }
@@ -722,7 +724,9 @@ class WorkoutSession(
     private var hrSum = 0.0
     private var hrSamples = 0
     private val workoutNp = LapNp()
-    private val driftSamples = ArrayList<Pair<Float, Float>>()
+    /** Heart rate drift of the workout (summary, ⓘ, tile) and of the whole ride (free ride). */
+    private val workoutDrift = Drift()
+    private val rideDrift = Drift()
 
     private fun resetTotals() {
         workoutMs = 0
@@ -735,24 +739,8 @@ class WorkoutSession(
         hrSum = 0.0
         hrSamples = 0
         workoutNp.reset()
-        driftSamples.clear()
-    }
-
-    /**
-     * Pw:HR decoupling: (watts per beat in the first half − in the second half) ÷ the first
-     * half's, in %. Positive: the heart worked harder for the same power later on.
-     */
-    private fun driftPct(): Double? {
-        if (driftSamples.size < MIN_DRIFT_SAMPLES) return null
-        val half = driftSamples.size / 2
-        fun ratio(part: List<Pair<Float, Float>>): Double? {
-            val p = part.sumOf { it.first.toDouble() } / part.size
-            val hr = part.sumOf { it.second.toDouble() } / part.size
-            return if (p > 0 && hr > 0) p / hr else null
-        }
-        val first = ratio(driftSamples.subList(0, half)) ?: return null
-        val second = ratio(driftSamples.subList(half, driftSamples.size)) ?: return null
-        return (first - second) / first * 100.0
+        workoutDrift.reset()
+        _state.update { it.copy(workoutDriftPct = null) }
     }
 
     /** The workout so far (ⓘ). */
@@ -764,6 +752,7 @@ class WorkoutSession(
         avgCadence = if (cadSamples > 0) (cadSum / cadSamples).roundToInt() else null,
         maxPower = maxPower.takeIf { it > 0 },
         calories = _state.value.calories?.let { now -> (now - (caloriesAtStart ?: now)).coerceAtLeast(0) },
+        driftPct = workoutDrift.value(),
     )
 
     private fun summaryNow() = WorkoutSummary(
@@ -771,7 +760,7 @@ class WorkoutSession(
         avgPower = if (powerSamples > 0) (powerSum / powerSamples).roundToInt() else null,
         np = workoutNp.value,
         avgHr = if (hrSamples > 0) (hrSum / hrSamples).roundToInt() else null,
-        driftPct = driftPct(),
+        driftPct = workoutDrift.value(),
     )
 
     private fun goToStep(index: Int, natural: Boolean) {
@@ -819,8 +808,8 @@ class WorkoutSession(
         val st = _state.value
         // The lap average keeps counting while the workout is paused; only the interval timer stops.
         if (watts != null && workoutRunning()) {
-            // Power with the heart rate of the moment, for the heart rate drift at the end.
-            st.heartRate?.takeIf { it > 0 }?.let { hr -> driftSamples.add(watts.toFloat() to hr.toFloat()) }
+            // Power with the heart rate of the moment, for the workout's heart rate drift.
+            st.heartRate?.takeIf { it > 0 }?.let { hr -> workoutDrift.add(watts, hr.toDouble()) }
             powerSum += watts
             powerSamples++
             maxPower = maxOf(maxPower, watts.roundToInt())
@@ -835,6 +824,7 @@ class WorkoutSession(
         if (watts != null && recording) {
             freeLapNp.add(SystemClock.elapsedRealtime(), watts)
             PowerHistory.add(watts) // the free-ride power chart
+            st.heartRate?.takeIf { it > 0 }?.let { hr -> rideDrift.add(watts, hr.toDouble()) }
         }
         _state.update {
             it.copy(
@@ -842,6 +832,9 @@ class WorkoutSession(
                 lapAvg = if (lapSamples > 0) (lapSum / lapSamples).roundToInt() else it.lapAvg,
                 lapNp = lapNp.value,
                 freeLapNp = freeLapNp.value,
+                // Live drift to 0.1 %, so the state only changes when the shown number does.
+                workoutDriftPct = workoutDrift.value()?.let { d -> Math.round(d * 10) / 10.0 },
+                rideDriftPct = rideDrift.value()?.let { d -> Math.round(d * 10) / 10.0 },
             )
         }
     }
@@ -865,9 +858,9 @@ class WorkoutSession(
     companion object {
         const val COUNTDOWN_SECONDS = 5
         /** Values the free-ride power tile goes through. */
-        private const val FREE_POWER_VALUES = 6
-        /** Heart rate drift needs at least 20 minutes of power with heart rate (about 1 a second). */
-        private const val MIN_DRIFT_SAMPLES = 20 * 60
+        private const val FREE_POWER_VALUES = 7
+        /** Values the free-ride HR tile goes through (now, lap, ride, drift). */
+        private const val FREE_HR_VALUES = 4
         /** A choice made with a remote button confirms itself after this many seconds. */
         const val AUTO_CONFIRM_SECONDS = 5
         /** An unconfirmed jump choice cancels itself after this long. */

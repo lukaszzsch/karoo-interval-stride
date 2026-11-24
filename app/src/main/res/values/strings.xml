@@ -131,6 +131,7 @@
     <string name="last_lap_label">Ostatnie okr.</string>
     <string name="last_lap_value">%1$s · %2$d W</string>
     <string name="lap_hr">HR okr.</string>
+    <string name="drift">Pw:HR</string>
     <string name="bpm_value">%1$d bpm</string>
     <string name="settings_title">Ustawienia</string>
     <string name="appearance">Wygląd</string>
@@ -308,6 +309,8 @@
     <string name="metric_target">Cel</string>
     <string name="metric_target_range">Zakres celu</string>
     <string name="metric_hr">Tętno</string>
+    <string name="metric_lap_hr">Średnie tętno okrążenia</string>
+    <string name="metric_drift">Dryf tętna (Pw:HR)</string>
     <string name="metric_cadence">Kadencja</string>
     <string name="metric_calories">Kalorie</string>
     <string name="metric_speed">Prędkość</string>
@@ -326,4 +329,6 @@
     <string name="info_max_power">Maks. moc</string>
     <string name="info_tss">TSS</string>
     <string name="info_if">IF</string>
+    <string name="info_drift">Dryf tętna</string>
+    <string name="info_lap_hr">Śr. tętno okr.</string>
 </resources>

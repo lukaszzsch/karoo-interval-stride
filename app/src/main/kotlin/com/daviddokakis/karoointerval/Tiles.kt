@@ -12,6 +12,8 @@ enum class TileMetric(val label: Int, val setting: Int) {
     TARGET(R.string.target, R.string.metric_target),
     TARGET_RANGE(R.string.target_range, R.string.metric_target_range),
     HEART_RATE(R.string.hr, R.string.metric_hr),
+    LAP_HR(R.string.lap_hr, R.string.metric_lap_hr),
+    DRIFT(R.string.drift, R.string.metric_drift),
     CADENCE(R.string.cadence, R.string.metric_cadence),
     CALORIES(R.string.calories, R.string.metric_calories),
     SPEED(R.string.speed, R.string.metric_speed),
