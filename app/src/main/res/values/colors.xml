@@ -58,6 +58,8 @@
     <!-- Karoo native styling: Karoo's icon green, Karoo's button yellow (both modes, black symbol),
          and a grey, disabled skip button while paused -->
     <color name="karoo_green">#FF129A5E</color>
+    <!-- The interval clock flashing in its last seconds. -->
+    <color name="clock_flash">#FFFFB300</color>
     <color name="karoo_yellow">#FFFFE900</color>
     <color name="karoo_yellow_alt">#FFFFF27A</color>
     <color name="karoo_yellow_fg">#FF0B0B0B</color>

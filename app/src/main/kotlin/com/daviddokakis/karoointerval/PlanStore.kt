@@ -152,6 +152,17 @@ class PlanStore private constructor(context: Context) {
         _filledText.value = value
     }
 
+    private val _intervalEndAlert = MutableStateFlow(
+        prefs.getString("interval_end_alert", null)?.let { n -> IntervalEndAlert.entries.firstOrNull { it.name == n } } ?: IntervalEndAlert.SOUND,
+    )
+    /** How the last seconds of an interval are signalled: beeps, the clock flashing, or both. */
+    val intervalEndAlert: StateFlow<IntervalEndAlert> = _intervalEndAlert
+
+    fun setIntervalEndAlert(value: IntervalEndAlert) {
+        prefs.edit().putString("interval_end_alert", value.name).apply()
+        _intervalEndAlert.value = value
+    }
+
     private val _hrTileZone = MutableStateFlow(prefs.getBoolean("hr_tile_zone", false))
     /** HR tile filled with the heart rate zone's colour. */
     val hrTileZone: StateFlow<Boolean> = _hrTileZone

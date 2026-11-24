@@ -84,6 +84,11 @@
     <string name="filled_text_black">Czarne</string>
     <string name="filled_text_auto">Auto</string>
     <string name="filled_text_help">Kolor liczb i napisów na podświetlonych kafelkach: kadencja i średnia okrążenia względem celu oraz tętno w kolorze strefy. Auto: kadencja i okrążenie białe, tętno czarne lub białe, zależnie od tego, co lepiej widać na kolorze strefy.</string>
+    <string name="end_alert">Koniec interwału</string>
+    <string name="end_alert_sound">Dźwięk</string>
+    <string name="end_alert_flash">Miganie</string>
+    <string name="end_alert_both">Oba</string>
+    <string name="end_alert_help">Jak sygnalizować ostatnie sekundy interwału: dźwięk w ostatnich 3 s, zegar migający na bursztynowo w ostatnich 5 s (gdy jeździsz w słuchawkach) albo oba.</string>
     <string name="hr_tile_zone">Tło kafelka tętna</string>
     <string name="hr_tile_plain">Zwykłe</string>
     <string name="hr_tile_zone_on">Kolor strefy</string>

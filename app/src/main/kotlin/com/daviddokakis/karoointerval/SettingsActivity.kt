@@ -139,6 +139,17 @@ class SettingsActivity : AppearanceActivity() {
         form.addView(settingsHelp(getString(R.string.tiles_style_help)))
         form.addView(settingsDivider())
 
+        // Last seconds of an interval: beeps / the clock flashing / both
+        form.addView(settingsHeading(R.drawable.ic_style, getString(R.string.end_alert)))
+        form.addView(
+            segmented(IntervalEndAlert.entries.map { it.label to it }, store.intervalEndAlert.value) { picked ->
+                store.setIntervalEndAlert(picked)
+                render()
+            },
+        )
+        form.addView(settingsHelp(getString(R.string.end_alert_help)))
+        form.addView(settingsDivider())
+
         // HR tile: plain / filled with the heart rate zone colour
         form.addView(settingsHeading(R.drawable.ic_style, getString(R.string.hr_tile_zone)))
         form.addView(

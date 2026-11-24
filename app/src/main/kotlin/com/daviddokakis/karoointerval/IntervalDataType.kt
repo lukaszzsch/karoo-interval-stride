@@ -57,7 +57,7 @@ class IntervalDataType(
                 val key = Key(
                     s.countdown, s.stepIndex, s.workoutPaused, s.chartZoomed, s.plan?.id, s.selectTarget,
                     s.selectProgress, s.moveCancelled, s.targetShowsRange, s.wattsMode, s.karooStyle, s.appearance, s.navigating, s.hrShowsLap, s.lapShowsNp,
-                    s.autoConfirmLeft, s.finishArmed, s.finished, s.ergActive, s.intensityPct, s.clockShowsElapsed, s.freeChartSpan, s.waiting, s.summary, s.freePowerTile, s.freeHrTile, s.topRow, s.tileOutline, s.cadTile, s.lapCadence, s.rideCadence, s.gaugeRedOutside, s.zonePalette, s.hrTileZone, s.filledText, s.rideNp, s.rideIf, s.rideTss,
+                    s.autoConfirmLeft, s.finishArmed, s.finished, s.ergActive, s.intensityPct, s.clockShowsElapsed, s.freeChartSpan, s.waiting, s.summary, s.freePowerTile, s.freeHrTile, s.topRow, s.tileOutline, s.cadTile, s.lapCadence, s.rideCadence, s.gaugeRedOutside, s.zonePalette, s.hrTileZone, s.intervalEndAlert, s.filledText, s.rideNp, s.rideIf, s.rideTss,
                     s.indoor, s.rideIdle, s.ergConnected, s.trainerOutdoor,
                     s.infoOpen, s.freeClockShowsRide, s.ratingSummary, s.leftTile, s.rightTile, s.leftTileIndex, s.rightTileIndex,
                     // Each new second of the interval clock redraws as soon as the Karoo allows,
@@ -125,6 +125,7 @@ class IntervalDataType(
         val gaugeRedOutside: Boolean,
         val zonePalette: ZonePalette,
         val hrTileZone: Boolean,
+        val intervalEndAlert: IntervalEndAlert,
         val filledText: FilledText,
         val rideNp: Int?,
         val rideIf: Double?,

@@ -342,6 +342,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             },
         )
         v.setOnClickPendingIntent(R.id.time_left, clockToggleIntent)
+        applyClockFlash(v, s)
         val total = s.intervalTotalSec ?: 0
         val progress = if (total > 0) (s.elapsedInStepSec * 1000 / total).coerceIn(0, 1000) else 0
         v.setProgressBar(R.id.interval_progress, 1000, progress, false)
@@ -1437,6 +1438,27 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
      * Settings › Tło kafelka tętna: the HR tile filled with the zone colour of [hr] (Karoo or
      * Garmin / Zwift palette), black or white text, whichever reads better on it.
      */
+    /**
+     * Settings › Koniec interwału: in the interval's last 5 s the clock flashes, a second amber
+     * text, a second an amber block with dark text, so the end shows without the beeps.
+     */
+    private fun applyClockFlash(v: RemoteViews, s: ScreenState) {
+        if (!s.intervalEndAlert.flashes) return
+        if (s.waiting || s.finished || s.paused || s.workoutPaused || s.countdown != null) return
+        val left = s.intervalRemainingSec ?: return
+        if (left !in 1..IntervalEndAlert.FLASH_SECONDS) return
+        // A little room around the digits for the amber block (the same in both phases, so the
+        // clock doesn't shift each second).
+        val padX = (5 * density).toInt()
+        v.setViewPadding(R.id.time_left, padX, 0, padX, 0)
+        if (left % 2 == 1) {
+            v.setInt(R.id.time_left, "setBackgroundResource", R.drawable.bg_clock_flash)
+            v.setTextColor(R.id.time_left, 0xFF000000.toInt())
+        } else {
+            v.setTextColor(R.id.time_left, color(R.color.clock_flash))
+        }
+    }
+
     private fun applyHrZoneTile(v: RemoteViews, s: ScreenState, hr: Int?, tile: Int = R.id.hr_tile, value: Int = R.id.hr, label: Int = R.id.hr_label) {
         if (!s.hrTileZone || s.paused) return
         val zone = s.zoneOf(hr?.takeIf { it > 0 }) ?: return

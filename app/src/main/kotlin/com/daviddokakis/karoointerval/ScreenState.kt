@@ -111,6 +111,8 @@ data class ScreenState(
     val gaugeRedOutside: Boolean = false,
     /** HR tile filled with the heart rate zone's colour (Settings). */
     val hrTileZone: Boolean = false,
+    /** Settings › Koniec interwału. */
+    val intervalEndAlert: IntervalEndAlert = IntervalEndAlert.SOUND,
     /** Text on filled tiles (Settings). */
     val filledText: FilledText = FilledText.WHITE,
     /** Power zone colours in use (Settings), so a change redraws the field. */
