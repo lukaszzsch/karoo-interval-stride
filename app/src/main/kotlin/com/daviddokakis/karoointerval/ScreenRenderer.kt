@@ -1208,9 +1208,9 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             )
             val showLast = turns.isNotEmpty() && s.freeLastLap
             v.setViewVisibility(R.id.target_block, if (showLast) View.VISIBLE else View.INVISIBLE)
-            // Between ⓘ and the pause icon (112 dp / 28 dp, right up to the icon): one line, the
+            // Right edge of the field (132 dp / 8 dp: no pause button without a workout): one line, the
             // short label and a slightly smaller value, so it fits the Karoo's narrow screen.
-            v.setViewPadding(R.id.target_block, (112 * density).toInt(), 0, (28 * density).toInt(), 0)
+            v.setViewPadding(R.id.target_block, (132 * density).toInt(), 0, (8 * density).toInt(), 0)
             v.setInt(R.id.target_label, "setMaxLines", 1)
             v.setInt(R.id.target, "setMaxLines", 1)
             v.setTextViewTextSize(R.id.target, TypedValue.COMPLEX_UNIT_PX, LAST_LAP_VALUE_SP * density * scale)
