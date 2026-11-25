@@ -1208,9 +1208,9 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             )
             val showLast = turns.isNotEmpty() && s.freeLastLap
             v.setViewVisibility(R.id.target_block, if (showLast) View.VISIBLE else View.INVISIBLE)
-            // Between ⓘ and the pause icon (100 dp / 32 dp: the same room, nudged right): one line, the
+            // Between ⓘ and the pause icon (112 dp / 28 dp, right up to the icon): one line, the
             // short label and a slightly smaller value, so it fits the Karoo's narrow screen.
-            v.setViewPadding(R.id.target_block, (100 * density).toInt(), 0, (32 * density).toInt(), 0)
+            v.setViewPadding(R.id.target_block, (112 * density).toInt(), 0, (28 * density).toInt(), 0)
             v.setInt(R.id.target_label, "setMaxLines", 1)
             v.setInt(R.id.target, "setMaxLines", 1)
             v.setTextViewTextSize(R.id.target, TypedValue.COMPLEX_UNIT_PX, LAST_LAP_VALUE_SP * density * scale)
@@ -1715,7 +1715,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         /** Free ride: the last lap's values above the arc take turns, each this long. */
         private const val LAST_LAP_TURN_MS = 2000L
         /** Free ride: the last lap's value above the arc (the target there is 18sp). */
-        private const val LAST_LAP_VALUE_SP = 16f
+        private const val LAST_LAP_VALUE_SP = 15f
         private const val SEP = " \u00b7 "
         /** Redraws (about seconds) a scrolled note waits at its start and at its end. */
         private const val HOLD = 2
