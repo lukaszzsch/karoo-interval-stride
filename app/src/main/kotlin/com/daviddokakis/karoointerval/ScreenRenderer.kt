@@ -133,7 +133,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         val s = DemoData.apply(state)
         useAppearance(s.appearance)
         karooNow = s.karooStyle
-        if (s.infoOpen && s.plan != null) return renderInfo(s, s.plan)
+        if (s.infoOpen) return if (s.plan != null && !s.finished) renderWorkoutInfo(s, s.plan) else renderRideInfo(s)
         // No workout, or the workout is done and the ride goes on: the free-ride screen.
         if (s.plan == null || s.finished) return renderFreeRide(s)
         // The Gauge watts mode has its own layout; the other four share the classic one. Each has
@@ -194,8 +194,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         v.setViewVisibility(R.id.btn_settings, View.VISIBLE)
         v.setViewVisibility(R.id.btn_pause, View.VISIBLE)
         v.setOnClickPendingIntent(R.id.btn_settings, settingsIntent)
-        // ⓘ indoors: the whole workout so far
-        v.setViewVisibility(R.id.btn_info, if (s.indoor) View.VISIBLE else View.GONE)
+        // ⓘ: the whole workout so far (indoors and out)
+        v.setViewVisibility(R.id.btn_info, View.VISIBLE)
         v.setInt(R.id.btn_info_icon, "setColorFilter", color(R.color.text))
         v.setInt(R.id.btn_info_icon, "setImageAlpha", ICON_ALPHA)
         v.setOnClickPendingIntent(R.id.btn_info, infoIntent)
@@ -771,11 +771,56 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     }
 
     /**
-     * ⓘ (indoors): the whole workout so far, one picture: its name, where you are and how long it
+     * ⓘ: the whole workout so far, one picture: its name, where you are and how long it
      * is, then twelve tiles: time so far, time left, average power, NP, average heart rate and
      * cadence, calories, max power, TSS, IF, heart rate drift and the lap's heart rate. ✕ in the top right; a tap anywhere closes it.
      */
-    private fun renderInfo(s: ScreenState, plan: WorkoutPlan): RemoteViews {
+    private fun renderWorkoutInfo(s: ScreenState, plan: WorkoutPlan): RemoteViews {
+        val live = s.live
+        val ftp = s.ftp
+        val np = live?.np
+        val iF = if (np != null && ftp != null && ftp > 0) np.toFloat() / ftp else null
+        val tss = if (iF != null && live != null && ftp != null && np != null) (live.timeSec * np * iF / (ftp * 3600f) * 100).toInt() else null
+        val tiles = listOf(
+            R.string.info_time to live?.timeSec?.let(::formatClock),
+            R.string.info_left to s.workoutRemainingSec?.let(::formatClock),
+            R.string.info_avg_power to live?.avgPower?.toString(),
+            R.string.info_np to np?.toString(),
+            R.string.info_avg_hr to live?.avgHr?.toString(),
+            R.string.info_avg_cadence to live?.avgCadence?.toString(),
+            R.string.info_calories to live?.calories?.toString(),
+            R.string.info_max_power to live?.maxPower?.toString(),
+            R.string.info_tss to tss?.toString(),
+            R.string.info_if to iF?.let { String.format(java.util.Locale.forLanguageTag("pl"), "%.2f", it) },
+            R.string.info_drift to live?.driftPct?.let(::formatDrift),
+            R.string.info_lap_hr to s.lapHrAvg?.toString(),
+        )
+        val sub = context.getString(R.string.info_where, s.stepIndex + 1, s.stepCount, formatClock(plan.totalSec))
+        return renderInfo(s, plan.name, sub, tiles)
+    }
+
+    /** ⓘ without a workout (or after it): the whole ride so far, from the Karoo's ride data. */
+    private fun renderRideInfo(s: ScreenState): RemoteViews {
+        val tiles = listOf(
+            R.string.info_ride_time to s.rideTimeSec?.let(::formatClock),
+            R.string.info_lap_time to s.lapTimeSec?.let(::formatClock),
+            R.string.info_avg_power to s.rideAvgPower?.toString(),
+            R.string.info_np to s.rideNp?.toString(),
+            R.string.info_avg_hr to s.rideAvgHr?.toString(),
+            R.string.info_avg_cadence to s.rideCadence?.toString(),
+            R.string.info_calories to s.calories?.toString(),
+            R.string.info_max_power to s.rideMaxPower?.takeIf { it > 0 }?.toString(),
+            R.string.info_tss to s.rideTss?.toString(),
+            R.string.info_if to s.rideIf?.let { String.format(java.util.Locale.forLanguageTag("pl"), "%.2f", it) },
+            R.string.info_drift to s.rideDriftPct?.let(::formatDrift),
+            R.string.info_lap_hr to s.lapHrAvg?.toString(),
+        )
+        val sub = s.lapNumber?.let { context.getString(R.string.lap_number, it) } ?: ""
+        return renderInfo(s, context.getString(R.string.info_ride_title), sub, tiles)
+    }
+
+    /** ⓘ: a title, a line under it, and two columns of tiles; ✕ (or a tap anywhere) closes it. */
+    private fun renderInfo(s: ScreenState, title: String, subtitle: String, tiles: List<Pair<Int, String?>>): RemoteViews {
         val layout = R.layout.field_info
         val v = RemoteViews(context.packageName, layout)
         applyAppearance(v, layout)
@@ -821,28 +866,9 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             while (e.length > 1 && paint.measureText("$e\u2026") > room) e = e.dropLast(1)
             return "$e\u2026"
         }
-        c.drawText(cut(plan.name, titleP), pad, by + 15 * k, titleP)
-        c.drawText(cut(context.getString(R.string.info_where, s.stepIndex + 1, s.stepCount, formatClock(plan.totalSec)), subP), pad, by + 31 * k, subP)
-        // The tiles: two columns, six rows, filling what's left of the field
-        val live = s.live
-        val ftp = s.ftp
-        val np = live?.np
-        val iF = if (np != null && ftp != null && ftp > 0) np.toFloat() / ftp else null
-        val tss = if (iF != null && live != null && ftp != null && np != null) (live.timeSec * np * iF / (ftp * 3600f) * 100).toInt() else null
-        val tiles = listOf(
-            R.string.info_time to live?.timeSec?.let(::formatClock),
-            R.string.info_left to s.workoutRemainingSec?.let(::formatClock),
-            R.string.info_avg_power to live?.avgPower?.toString(),
-            R.string.info_np to np?.toString(),
-            R.string.info_avg_hr to live?.avgHr?.toString(),
-            R.string.info_avg_cadence to live?.avgCadence?.toString(),
-            R.string.info_calories to live?.calories?.toString(),
-            R.string.info_max_power to live?.maxPower?.toString(),
-            R.string.info_tss to tss?.toString(),
-            R.string.info_if to iF?.let { String.format(java.util.Locale.forLanguageTag("pl"), "%.2f", it) },
-            R.string.info_drift to live?.driftPct?.let(::formatDrift),
-            R.string.info_lap_hr to s.lapHrAvg?.toString(),
-        )
+        c.drawText(cut(title, titleP), pad, by + 15 * k, titleP)
+        c.drawText(cut(subtitle, subP), pad, by + 31 * k, subP)
+        // The tiles: two columns, filling what's left of the field
         val rows = (tiles.size + 1) / 2
         val gap = 4 * k
         val top = by + btn + 8 * k
@@ -974,6 +1000,11 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         // Nothing to pause without a workout (the corner keeps its space).
         v.setViewVisibility(R.id.btn_pause, View.INVISIBLE)
         v.setViewVisibility(R.id.btn_resume, View.GONE)
+        // ⓘ: the whole ride so far
+        v.setViewVisibility(R.id.btn_info, View.VISIBLE)
+        v.setInt(R.id.btn_info_icon, "setColorFilter", color(R.color.text))
+        v.setInt(R.id.btn_info_icon, "setImageAlpha", ICON_ALPHA)
+        v.setOnClickPendingIntent(R.id.btn_info, infoIntent)
 
         // Watts in the colour of the Karoo power zone they're in, like the range colours in a
         // workout: tap cycles plain, coloured number, coloured background, both, and the gauge.

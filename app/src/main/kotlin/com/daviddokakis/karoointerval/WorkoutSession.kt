@@ -130,6 +130,7 @@ class WorkoutSession(
         collectInt(DataType.Type.AVERAGE_HR) { v -> _state.update { it.copy(rideAvgHr = v) } }
         collectInt(DataType.Type.NORMALIZED_POWER) { v -> _state.update { it.copy(rideNp = v) } }
         collectInt(DataType.Type.TRAINING_STRESS_SCORE) { v -> _state.update { it.copy(rideTss = v) } }
+        collectInt(DataType.Type.MAX_POWER) { v -> _state.update { it.copy(rideMaxPower = v) } }
         scope.launch {
             karoo.streamDataFlow(DataType.Type.INTENSITY_FACTOR).collect { s ->
                 _state.update { it.copy(rideIf = s.single()?.takeIf { v -> v > 0 }) }

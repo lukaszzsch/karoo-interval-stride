@@ -335,5 +335,8 @@
     <string name="info_tss">TSS</string>
     <string name="info_if">IF</string>
     <string name="info_drift">Dryf tętna</string>
+    <string name="info_ride_title">Jazda</string>
+    <string name="info_ride_time">Czas jazdy</string>
+    <string name="info_lap_time">Czas okr.</string>
     <string name="info_lap_hr">Śr. tętno okr.</string>
 </resources>

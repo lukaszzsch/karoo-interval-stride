@@ -99,6 +99,8 @@ data class ScreenState(
     val rideNp: Int? = null,
     val rideIf: Double? = null,
     val rideTss: Int? = null,
+    /** The ride's highest power (Karoo). */
+    val rideMaxPower: Int? = null,
     /** What the top row shows. */
     val topRow: TopRow = TopRow.AUTO,
     /** Tiles as an outline instead of a grey fill. */
