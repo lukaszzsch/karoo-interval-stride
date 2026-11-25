@@ -34,6 +34,8 @@ data class ScreenState(
     /** Karoo's average heart rate this lap, and in the last lap (free ride). */
     val lapHrAvg: Int? = null,
     val lastLapHrAvg: Int? = null,
+    /** The last lap's average cadence (Karoo). */
+    val lastLapCadence: Int? = null,
     /** Heart rate drift (Pw:HR, %) so far: of the workout, and of the whole ride (free ride); null under 20 min. */
     val workoutDriftPct: Double? = null,
     val rideDriftPct: Double? = null,

@@ -1196,16 +1196,22 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             v.setTextColor(R.id.cad_label, labelColor)
         }
         v.setViewVisibility(R.id.target_next, View.GONE)
-        val lastLap = lastLapTime?.let { t -> listOfNotNull(formatClock(t), s.lastLapPowerAvg?.let { "$it W" }).joinToString(" · ") }
         if (gaugeMode) {
-            // Top row: the last lap ("Poprz. okr. 5:00 · 180 W"), hidden until the first lap ends
-            // or when switched off (Settings). Kept clear of the gear and ⓘ on the left and the
-            // pause corner on the right: the padding shifts it right of the centre.
-            val showLast = lastLap != null && s.freeLastLap
+            // Top row: the last lap, hidden until the first lap ends or when switched off
+            // (Settings). "Poprz. okr." stays; beside it its time, power, heart rate and cadence
+            // take turns, 2 s each (one at a time fits between the gear / ⓘ and the pause corner).
+            val turns = if (lastLapTime == null) emptyList() else listOfNotNull(
+                formatClock(lastLapTime),
+                s.lastLapPowerAvg?.takeIf { it > 0 }?.let { "$it W" },
+                s.lastLapHrAvg?.takeIf { it > 0 }?.let { "$it bpm" },
+                s.lastLapCadence?.takeIf { it > 0 }?.let { "$it rpm" },
+            )
+            val showLast = turns.isNotEmpty() && s.freeLastLap
             v.setViewVisibility(R.id.target_block, if (showLast) View.VISIBLE else View.INVISIBLE)
             v.setViewPadding(R.id.target_block, (88 * density).toInt(), 0, (48 * density).toInt(), 0)
             v.setTextViewText(R.id.target_label, context.getString(R.string.last_lap_short))
-            v.setTextViewText(R.id.target, lastLap ?: "")
+            val turn = if (turns.isEmpty()) "" else turns[((SystemClock.elapsedRealtime() / LAST_LAP_TURN_MS) % turns.size).toInt()]
+            v.setTextViewText(R.id.target, turn)
         } else {
             v.setViewVisibility(R.id.target_tile, View.GONE)
         }
@@ -1701,6 +1707,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         private const val TILE_LABEL_MIN_SP = 12f
         /** How long each of two alternating tile labels stays ("Kadencja" / "85–90"). */
         private const val LABEL_TURN_MS = 3000L
+        /** Free ride: the last lap's values above the arc take turns, each this long. */
+        private const val LAST_LAP_TURN_MS = 2000L
         private const val SEP = " \u00b7 "
         /** Redraws (about seconds) a scrolled note waits at its start and at its end. */
         private const val HOLD = 2

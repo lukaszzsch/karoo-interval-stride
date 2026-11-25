@@ -138,7 +138,7 @@
     <string name="free_last_lap">Poprzednie okrążenie nad łukiem</string>
     <string name="free_last_lap_on">Pokaż</string>
     <string name="free_last_lap_off">Ukryj</string>
-    <string name="free_last_lap_help">Jazda dowolna, ekran z łukiem: czas i średnia moc poprzedniego okrążenia nad łukiem. Te dane są też w panelu ⓘ.</string>
+    <string name="free_last_lap_help">Jazda dowolna, ekran z łukiem: czas, średnia moc, tętno i kadencja poprzedniego okrążenia nad łukiem, na zmianę co 2 s. Te dane są też w panelu ⓘ.</string>
     <string name="last_lap_value">%1$s · %2$d W</string>
     <string name="lap_hr">HR okr.</string>
     <string name="drift">Pw:HR</string>

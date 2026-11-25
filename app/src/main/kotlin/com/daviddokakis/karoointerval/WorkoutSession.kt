@@ -211,6 +211,7 @@ class WorkoutSession(
         collectInt(DataType.Type.AVERAGE_POWER_LAST_LAP) { v -> _state.update { it.copy(lastLapPowerAvg = v) } }
         collectInt(DataType.Type.AVERAGE_LAP_HR) { v -> _state.update { it.copy(lapHrAvg = v) } }
         collectInt(DataType.Type.AVERAGE_HR_LAST_LAP) { v -> _state.update { it.copy(lastLapHrAvg = v) } }
+        collectInt(DataType.Type.AVERAGE_CADENCE_LAST_LAP) { v -> _state.update { it.copy(lastLapCadence = v) } }
         // Cadence, smoothed as chosen in Settings (instant by default, like Karoo's Cadence field).
         scope.launch {
             store.cadenceSmoothing.collectLatest { smoothing ->
