@@ -17,7 +17,8 @@
         android:layout_height="match_parent"
         android:scaleType="fitStart" />
 
-    <View
+    <!-- A FrameLayout, not a plain View: RemoteViews can't inflate android.view.View. -->
+    <FrameLayout
         android:id="@+id/info_close"
         android:layout_width="60dp"
         android:layout_height="60dp"
