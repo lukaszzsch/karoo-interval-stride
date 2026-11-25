@@ -150,6 +150,17 @@ class SettingsActivity : AppearanceActivity() {
         form.addView(settingsHelp(getString(R.string.end_alert_help)))
         form.addView(settingsDivider())
 
+        // Free ride, gauge: the last lap above the arc, shown / hidden
+        form.addView(settingsHeading(R.drawable.ic_style, getString(R.string.free_last_lap)))
+        form.addView(
+            segmented(listOf(R.string.free_last_lap_on to true, R.string.free_last_lap_off to false), store.freeLastLap.value) { on ->
+                store.setFreeLastLap(on)
+                render()
+            },
+        )
+        form.addView(settingsHelp(getString(R.string.free_last_lap_help)))
+        form.addView(settingsDivider())
+
         // ⓘ: power and heart rate tiles plain / in their zone colour
         form.addView(settingsHeading(R.drawable.ic_style, getString(R.string.info_zone_colors)))
         form.addView(

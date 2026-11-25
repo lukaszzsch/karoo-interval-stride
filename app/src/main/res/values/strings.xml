@@ -134,6 +134,11 @@
     <string name="jumping_to">Skok do</string>
     <string name="lap_time">Czas okr.</string>
     <string name="last_lap_label">Ostatnie okr.</string>
+    <string name="last_lap_short">Poprz. okr.</string>
+    <string name="free_last_lap">Poprzednie okrążenie nad łukiem</string>
+    <string name="free_last_lap_on">Pokaż</string>
+    <string name="free_last_lap_off">Ukryj</string>
+    <string name="free_last_lap_help">Jazda dowolna, ekran z łukiem: czas i średnia moc poprzedniego okrążenia nad łukiem. Te dane są też w panelu ⓘ.</string>
     <string name="last_lap_value">%1$s · %2$d W</string>
     <string name="lap_hr">HR okr.</string>
     <string name="drift">Pw:HR</string>

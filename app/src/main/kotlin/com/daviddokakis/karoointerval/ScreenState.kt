@@ -113,6 +113,8 @@ data class ScreenState(
     val infoShowsRide: Boolean = false,
     /** Settings › Kolory stref w ⓘ: power and heart rate tiles in their zone colour. */
     val infoZoneColors: Boolean = false,
+    /** Free ride, gauge: the last lap above the arc (Settings). */
+    val freeLastLap: Boolean = true,
     /** What the top row shows. */
     val topRow: TopRow = TopRow.AUTO,
     /** Tiles as an outline instead of a grey fill. */

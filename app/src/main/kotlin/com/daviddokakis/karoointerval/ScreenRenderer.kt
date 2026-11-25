@@ -1198,9 +1198,13 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         v.setViewVisibility(R.id.target_next, View.GONE)
         val lastLap = lastLapTime?.let { t -> listOfNotNull(formatClock(t), s.lastLapPowerAvg?.let { "$it W" }).joinToString(" · ") }
         if (gaugeMode) {
-            // Top row: the last lap ("Ost. okr. 5:00 · 180 W"), hidden until the first lap ends.
-            v.setViewVisibility(R.id.target_block, if (lastLap != null) View.VISIBLE else View.INVISIBLE)
-            v.setTextViewText(R.id.target_label, context.getString(R.string.last_lap_label))
+            // Top row: the last lap ("Poprz. okr. 5:00 · 180 W"), hidden until the first lap ends
+            // or when switched off (Settings). Kept clear of the gear and ⓘ on the left and the
+            // pause corner on the right: the padding shifts it right of the centre.
+            val showLast = lastLap != null && s.freeLastLap
+            v.setViewVisibility(R.id.target_block, if (showLast) View.VISIBLE else View.INVISIBLE)
+            v.setViewPadding(R.id.target_block, (88 * density).toInt(), 0, (48 * density).toInt(), 0)
+            v.setTextViewText(R.id.target_label, context.getString(R.string.last_lap_short))
             v.setTextViewText(R.id.target, lastLap ?: "")
         } else {
             v.setViewVisibility(R.id.target_tile, View.GONE)

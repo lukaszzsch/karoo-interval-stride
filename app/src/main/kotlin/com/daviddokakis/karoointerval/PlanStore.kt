@@ -163,6 +163,15 @@ class PlanStore private constructor(context: Context) {
         _intervalEndAlert.value = value
     }
 
+    private val _freeLastLap = MutableStateFlow(prefs.getBoolean("free_last_lap", true))
+    /** Free ride, gauge: the last lap's time and power above the arc. */
+    val freeLastLap: StateFlow<Boolean> = _freeLastLap
+
+    fun setFreeLastLap(on: Boolean) {
+        prefs.edit().putBoolean("free_last_lap", on).apply()
+        _freeLastLap.value = on
+    }
+
     private val _infoZoneColors = MutableStateFlow(prefs.getBoolean("info_zone_colors", false))
     /** ⓘ: power and heart rate tiles in their zone colour. */
     val infoZoneColors: StateFlow<Boolean> = _infoZoneColors

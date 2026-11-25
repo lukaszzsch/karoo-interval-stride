@@ -233,6 +233,7 @@ class WorkoutSession(
         collectInt(DataType.Type.MAX_HR_LAP) { v -> _state.update { it.copy(lapMaxHr = v) } }
         collectInt(DataType.Type.MAX_POWER_LAP) { v -> _state.update { it.copy(lapMaxPower = v) } }
         scope.launch { store.infoZoneColors.collect { on -> _state.update { it.copy(infoZoneColors = on) } } }
+        scope.launch { store.freeLastLap.collect { on -> _state.update { it.copy(freeLastLap = on) } } }
         scope.launch {
             karoo.streamDataFlow(DataType.Type.SPEED).collect { s -> _state.update { it.copy(speedMs = s.single()) } }
         }
