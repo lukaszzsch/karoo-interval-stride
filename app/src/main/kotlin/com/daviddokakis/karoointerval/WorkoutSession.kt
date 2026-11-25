@@ -643,6 +643,13 @@ class WorkoutSession(
             val dt = now - lastTick
             lastTick = now
             val st = _state.value
+            // Heart rate drift: one sample of power and heart rate a second, on the clock (the
+            // Karoo doesn't send a power reading every second, e.g. steady ERG watts).
+            sinceDrift += dt
+            if (sinceDrift >= 1000) {
+                sinceDrift -= 1000
+                sampleDrift(st)
+            }
             // ⓘ open: its numbers about once a second
             sinceLive += dt
             if (st.infoOpen && sinceLive >= 1000) {
@@ -721,6 +728,23 @@ class WorkoutSession(
     /** The ride's calories when the workout started (its own calories are what's added since). */
     private var caloriesAtStart: Int? = null
     private var sinceLive = 0L
+    private var sinceDrift = 0L
+
+    /** One second of riding for the heart rate drift: of the workout while it runs, of the ride while recording. */
+    private fun sampleDrift(st: ScreenState) {
+        val watts = st.power ?: return
+        val hr = st.heartRate?.takeIf { it > 0 } ?: return
+        if (!recording) return
+        rideDrift.add(watts.toDouble(), hr.toDouble())
+        if (workoutRunning()) workoutDrift.add(watts.toDouble(), hr.toDouble())
+        // To 0.1 %, so the state only changes when the shown number does.
+        _state.update {
+            it.copy(
+                workoutDriftPct = workoutDrift.value()?.let { d -> Math.round(d * 10) / 10.0 },
+                rideDriftPct = rideDrift.value()?.let { d -> Math.round(d * 10) / 10.0 },
+            )
+        }
+    }
     private var powerSum = 0.0
     private var powerSamples = 0
     private var hrSum = 0.0
@@ -810,8 +834,6 @@ class WorkoutSession(
         val st = _state.value
         // The lap average keeps counting while the workout is paused; only the interval timer stops.
         if (watts != null && workoutRunning()) {
-            // Power with the heart rate of the moment, for the workout's heart rate drift.
-            st.heartRate?.takeIf { it > 0 }?.let { hr -> workoutDrift.add(watts, hr.toDouble()) }
             powerSum += watts
             powerSamples++
             maxPower = maxOf(maxPower, watts.roundToInt())
@@ -826,7 +848,6 @@ class WorkoutSession(
         if (watts != null && recording) {
             freeLapNp.add(SystemClock.elapsedRealtime(), watts)
             PowerHistory.add(watts) // the free-ride power chart
-            st.heartRate?.takeIf { it > 0 }?.let { hr -> rideDrift.add(watts, hr.toDouble()) }
         }
         _state.update {
             it.copy(
@@ -834,9 +855,6 @@ class WorkoutSession(
                 lapAvg = if (lapSamples > 0) (lapSum / lapSamples).roundToInt() else it.lapAvg,
                 lapNp = lapNp.value,
                 freeLapNp = freeLapNp.value,
-                // Live drift to 0.1 %, so the state only changes when the shown number does.
-                workoutDriftPct = workoutDrift.value()?.let { d -> Math.round(d * 10) / 10.0 },
-                rideDriftPct = rideDrift.value()?.let { d -> Math.round(d * 10) / 10.0 },
             )
         }
     }

@@ -42,7 +42,7 @@ class Drift(private val minSamples: Int = MIN_SAMPLES) {
     }
 
     companion object {
-        /** At least 20 minutes of power with heart rate (about 1 a second). */
+        /** At least 20 minutes of power with heart rate (one sample a second). */
         const val MIN_SAMPLES = 20 * 60
         private const val INITIAL = 4096
     }
