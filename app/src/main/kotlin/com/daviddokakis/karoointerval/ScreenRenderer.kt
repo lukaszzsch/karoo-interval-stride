@@ -1208,9 +1208,9 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             )
             val showLast = turns.isNotEmpty() && s.freeLastLap
             v.setViewVisibility(R.id.target_block, if (showLast) View.VISIBLE else View.INVISIBLE)
-            // Exactly between ⓘ (84 dp from the left) and the pause corner (48 dp): one line, the
+            // Between ⓘ and the pause icon (100 dp / 32 dp: the same room, nudged right): one line, the
             // short label and a slightly smaller value, so it fits the Karoo's narrow screen.
-            v.setViewPadding(R.id.target_block, (84 * density).toInt(), 0, (48 * density).toInt(), 0)
+            v.setViewPadding(R.id.target_block, (100 * density).toInt(), 0, (32 * density).toInt(), 0)
             v.setInt(R.id.target_label, "setMaxLines", 1)
             v.setInt(R.id.target, "setMaxLines", 1)
             v.setTextViewTextSize(R.id.target, TypedValue.COMPLEX_UNIT_PX, LAST_LAP_VALUE_SP * density * scale)
