@@ -134,7 +134,7 @@
     <string name="jumping_to">Skok do</string>
     <string name="lap_time">Czas okr.</string>
     <string name="last_lap_label">Ostatnie okr.</string>
-    <string name="last_lap_short">Poprz. okr.</string>
+    <string name="last_lap_short">Poprz.</string>
     <string name="free_last_lap">Poprzednie okrążenie nad łukiem</string>
     <string name="free_last_lap_on">Pokaż</string>
     <string name="free_last_lap_off">Ukryj</string>

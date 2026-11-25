@@ -1208,7 +1208,12 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             )
             val showLast = turns.isNotEmpty() && s.freeLastLap
             v.setViewVisibility(R.id.target_block, if (showLast) View.VISIBLE else View.INVISIBLE)
-            v.setViewPadding(R.id.target_block, (150 * density).toInt(), 0, (44 * density).toInt(), 0)
+            // Exactly between ⓘ (84 dp from the left) and the pause corner (48 dp): one line, the
+            // short label and a slightly smaller value, so it fits the Karoo's narrow screen.
+            v.setViewPadding(R.id.target_block, (84 * density).toInt(), 0, (48 * density).toInt(), 0)
+            v.setInt(R.id.target_label, "setMaxLines", 1)
+            v.setInt(R.id.target, "setMaxLines", 1)
+            v.setTextViewTextSize(R.id.target, TypedValue.COMPLEX_UNIT_PX, LAST_LAP_VALUE_SP * density * scale)
             v.setTextViewText(R.id.target_label, context.getString(R.string.last_lap_short))
             val turn = if (turns.isEmpty()) "" else turns[((SystemClock.elapsedRealtime() / LAST_LAP_TURN_MS) % turns.size).toInt()]
             v.setTextViewText(R.id.target, turn)
@@ -1709,6 +1714,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         private const val LABEL_TURN_MS = 3000L
         /** Free ride: the last lap's values above the arc take turns, each this long. */
         private const val LAST_LAP_TURN_MS = 2000L
+        /** Free ride: the last lap's value above the arc (the target there is 18sp). */
+        private const val LAST_LAP_VALUE_SP = 16f
         private const val SEP = " \u00b7 "
         /** Redraws (about seconds) a scrolled note waits at its start and at its end. */
         private const val HOLD = 2
