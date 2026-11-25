@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ⓘ on the workout screen (indoors): the whole workout so far, drawn as one picture by
-  ScreenRenderer.renderInfo. Kept to its aspect (fitStart) so a route, which makes the field
-  shorter without telling the app, can't squash it. A tap anywhere closes it.
+  ⓘ: the whole workout so far, or the lap / whole ride without a workout, drawn as one picture
+  by ScreenRenderer.renderInfo. Kept to its aspect (fitStart) so a route, which makes the field
+  shorter without telling the app, can't squash it. info_close lies over the drawn ✕ (it closes
+  the panel); a tap elsewhere closes it in a workout, switches lap / whole ride without one.
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/field_root"
@@ -15,4 +16,11 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="fitStart" />
+
+    <View
+        android:id="@+id/info_close"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_gravity="top|end"
+        android:background="@android:color/transparent" />
 </FrameLayout>

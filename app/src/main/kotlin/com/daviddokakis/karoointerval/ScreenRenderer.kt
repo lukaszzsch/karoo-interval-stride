@@ -108,6 +108,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     private val leftTileIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_LEFT_TILE, 20) }
     private val rightTileIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_RIGHT_TILE, 21) }
     private val infoIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_TOGGLE_INFO, 22) }
+    private val infoScopeIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_INFO_SCOPE, 24) }
     private val freeClockIntent: PendingIntent by lazy { actionIntent(ActionReceiver.ACTION_FREE_CLOCK, 23) }
     private val rateIntent: PendingIntent by lazy {
         PendingIntent.getActivity(
@@ -776,63 +777,120 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         }
     }
 
+    /** One ⓘ tile: its label, value, and fill colour (a colour resource; null: the usual tile). */
+    private class InfoTile(val label: Int, val value: String?, val fill: Int? = null)
+
+    /** Settings › Kolory stref w ⓘ: the fill of a heart rate tile (its zone), or null. */
+    private fun hrFill(s: ScreenState, hr: Int?): Int? {
+        if (!s.infoZoneColors) return null
+        val zone = s.zoneOf(hr?.takeIf { it > 0 }) ?: return null
+        return s.zonePalette.fills[s.zonePalette.hrIndex(zone)]
+    }
+
+    /** Settings › Kolory stref w ⓘ: the fill of a power tile (its Karoo power zone), or null. */
+    private fun powerFill(s: ScreenState, watts: Int?): Int? {
+        if (!s.infoZoneColors) return null
+        val w = watts?.takeIf { it > 0 } ?: return null
+        return s.zonePalette.fills[powerZoneIndex(w, s.powerZones, s.profileFtp)]
+    }
+
+    private fun ifText(v: Double?): String? = v?.let { String.format(java.util.Locale.forLanguageTag("pl"), "%.2f", it) }
+
     /**
-     * ⓘ: the whole workout so far, one picture: its name, where you are and how long it
-     * is, then twelve tiles: time so far, time left, average power, NP, average heart rate and
-     * cadence, calories, max power, TSS, IF, heart rate drift and the lap's heart rate. ✕ in the top right; a tap anywhere closes it.
+     * ⓘ during a workout: the whole workout so far, one picture: its name, where you are and how
+     * long it is, then twelve tiles: time so far, time left, average power, NP, average heart rate
+     * and cadence, calories, max power, TSS, IF, heart rate drift and the lap's heart rate.
+     * ✕ in the top right; a tap anywhere closes it.
      */
     private fun renderWorkoutInfo(s: ScreenState, plan: WorkoutPlan): RemoteViews {
         val live = s.live
         val ftp = s.ftp
         val np = live?.np
-        val iF = if (np != null && ftp != null && ftp > 0) np.toFloat() / ftp else null
-        val tss = if (iF != null && live != null && ftp != null && np != null) (live.timeSec * np * iF / (ftp * 3600f) * 100).toInt() else null
+        val iF = if (np != null && ftp != null && ftp > 0) np.toDouble() / ftp else null
+        val tss = if (iF != null && live != null && ftp != null && np != null) (live.timeSec * np * iF / (ftp * 3600.0) * 100).toInt() else null
         val tiles = listOf(
-            R.string.info_time to live?.timeSec?.let(::formatClock),
-            R.string.info_left to s.workoutRemainingSec?.let(::formatClock),
-            R.string.info_avg_power to live?.avgPower?.toString(),
-            R.string.info_np to np?.toString(),
-            R.string.info_avg_hr to live?.avgHr?.toString(),
-            R.string.info_avg_cadence to live?.avgCadence?.toString(),
-            R.string.info_calories to live?.calories?.toString(),
-            R.string.info_max_power to live?.maxPower?.toString(),
-            R.string.info_tss to tss?.toString(),
-            R.string.info_if to iF?.let { String.format(java.util.Locale.forLanguageTag("pl"), "%.2f", it) },
-            R.string.info_drift to live?.driftPct?.let(::formatDrift),
-            R.string.info_lap_hr to s.lapHrAvg?.toString(),
+            InfoTile(R.string.info_time, live?.timeSec?.let(::formatClock)),
+            InfoTile(R.string.info_left, s.workoutRemainingSec?.let(::formatClock)),
+            InfoTile(R.string.info_avg_power, live?.avgPower?.toString(), powerFill(s, live?.avgPower)),
+            InfoTile(R.string.info_np, np?.toString(), powerFill(s, np)),
+            InfoTile(R.string.info_avg_hr, live?.avgHr?.toString(), hrFill(s, live?.avgHr)),
+            InfoTile(R.string.info_avg_cadence, live?.avgCadence?.toString()),
+            InfoTile(R.string.info_calories, live?.calories?.toString()),
+            InfoTile(R.string.info_max_power, live?.maxPower?.toString(), powerFill(s, live?.maxPower)),
+            InfoTile(R.string.info_tss, tss?.toString()),
+            InfoTile(R.string.info_if, ifText(iF)),
+            InfoTile(R.string.info_drift, live?.driftPct?.let(::formatDrift), live?.driftPct?.let { d -> driftColor(d) }),
+            InfoTile(R.string.info_lap_hr, s.lapHrAvg?.toString(), hrFill(s, s.lapHrAvg)),
         )
         val sub = context.getString(R.string.info_where, s.stepIndex + 1, s.stepCount, formatClock(plan.totalSec))
-        return renderInfo(s, plan.name, sub, tiles, live?.driftPct)
+        return renderInfo(s, plan.name, sub, tiles, tapIntent = infoIntent)
     }
 
-    /** ⓘ without a workout (or after it): the whole ride so far, from the Karoo's ride data. */
+    /**
+     * ⓘ without a workout (or after it): the current lap, from the Karoo's lap data; a tap on
+     * the panel switches to the whole ride and back, ✕ closes it.
+     */
     private fun renderRideInfo(s: ScreenState): RemoteViews {
-        val tiles = listOf(
-            R.string.info_ride_time to s.rideTimeSec?.let(::formatClock),
-            R.string.info_lap_time to s.lapTimeSec?.let(::formatClock),
-            R.string.info_avg_power to s.rideAvgPower?.toString(),
-            R.string.info_np to s.rideNp?.toString(),
-            R.string.info_avg_hr to s.rideAvgHr?.toString(),
-            R.string.info_avg_cadence to s.rideCadence?.toString(),
-            R.string.info_calories to s.calories?.toString(),
-            R.string.info_max_power to s.rideMaxPower?.takeIf { it > 0 }?.toString(),
-            R.string.info_tss to s.rideTss?.toString(),
-            R.string.info_if to s.rideIf?.let { String.format(java.util.Locale.forLanguageTag("pl"), "%.2f", it) },
-            R.string.info_drift to s.rideDriftPct?.let(::formatDrift),
-            R.string.info_lap_hr to s.lapHrAvg?.toString(),
-        )
-        val sub = s.lapNumber?.let { context.getString(R.string.lap_number, it) } ?: ""
-        return renderInfo(s, context.getString(R.string.info_ride_title), sub, tiles, s.rideDriftPct)
+        val lapLabel = s.lapNumber?.let { context.getString(R.string.lap_number, it) } ?: context.getString(R.string.info_lap)
+        val ftp = s.profileFtp
+        val tiles: List<InfoTile>
+        val title: String
+        val sub: String
+        if (s.infoShowsRide) {
+            title = context.getString(R.string.info_whole_ride)
+            sub = context.getString(R.string.info_tap_for, lapLabel.lowercase())
+            tiles = listOf(
+                InfoTile(R.string.info_ride_time, s.rideTimeSec?.let(::formatClock)),
+                InfoTile(R.string.info_lap_time, s.lapTimeSec?.let(::formatClock)),
+                InfoTile(R.string.info_avg_power, s.rideAvgPower?.toString(), powerFill(s, s.rideAvgPower)),
+                InfoTile(R.string.info_np, s.rideNp?.toString(), powerFill(s, s.rideNp)),
+                InfoTile(R.string.info_avg_hr, s.rideAvgHr?.toString(), hrFill(s, s.rideAvgHr)),
+                InfoTile(R.string.info_avg_cadence, s.rideCadence?.toString()),
+                InfoTile(R.string.info_calories, s.calories?.toString()),
+                InfoTile(R.string.info_max_power, s.rideMaxPower?.takeIf { it > 0 }?.toString(), powerFill(s, s.rideMaxPower)),
+                InfoTile(R.string.info_tss, s.rideTss?.toString()),
+                InfoTile(R.string.info_if, ifText(s.rideIf)),
+                InfoTile(R.string.info_drift, s.rideDriftPct?.let(::formatDrift), s.rideDriftPct?.let { d -> driftColor(d) }),
+                InfoTile(R.string.info_max_hr, s.rideMaxHr?.takeIf { it > 0 }?.toString(), hrFill(s, s.rideMaxHr)),
+            )
+        } else {
+            title = lapLabel
+            sub = context.getString(R.string.info_tap_for, context.getString(R.string.info_whole_ride).lowercase())
+            val np = s.freeLapNp
+            val time = s.lapTimeSec
+            val iF = if (np != null && ftp != null && ftp > 0) np.toDouble() / ftp else null
+            val tss = if (iF != null && time != null && ftp != null && np != null) (time * np * iF / (ftp * 3600.0) * 100).toInt() else null
+            val lapCalories = s.calories?.let { now -> s.lapCaloriesStart?.let { (now - it).coerceAtLeast(0) } }
+            tiles = listOf(
+                InfoTile(R.string.info_lap_time, time?.let(::formatClock)),
+                InfoTile(R.string.info_ride_time, s.rideTimeSec?.let(::formatClock)),
+                InfoTile(R.string.info_avg_power, s.lapPowerAvg?.toString(), powerFill(s, s.lapPowerAvg)),
+                InfoTile(R.string.info_np, np?.toString(), powerFill(s, np)),
+                InfoTile(R.string.info_avg_hr, s.lapHrAvg?.toString(), hrFill(s, s.lapHrAvg)),
+                InfoTile(R.string.info_avg_cadence, s.lapCadence?.toString()),
+                InfoTile(R.string.info_calories, lapCalories?.toString()),
+                InfoTile(R.string.info_max_power, s.lapMaxPower?.takeIf { it > 0 }?.toString(), powerFill(s, s.lapMaxPower)),
+                InfoTile(R.string.info_tss, tss?.toString()),
+                InfoTile(R.string.info_if, ifText(iF)),
+                InfoTile(R.string.info_drift, s.lapDriftPct?.let(::formatDrift), s.lapDriftPct?.let { d -> driftColor(d) }),
+                InfoTile(R.string.info_max_hr, s.lapMaxHr?.takeIf { it > 0 }?.toString(), hrFill(s, s.lapMaxHr)),
+            )
+        }
+        return renderInfo(s, title, sub, tiles, tapIntent = infoScopeIntent)
     }
 
-    /** ⓘ: a title, a line under it, and two columns of tiles; ✕ (or a tap anywhere) closes it. */
-    private fun renderInfo(s: ScreenState, title: String, subtitle: String, tiles: List<Pair<Int, String?>>, driftPct: Double? = null): RemoteViews {
+    /**
+     * ⓘ: a title, a line under it, and two columns of tiles. ✕ closes it; a tap elsewhere does
+     * [tapIntent] (closes it too during a workout, switches lap / whole ride without one).
+     */
+    private fun renderInfo(s: ScreenState, title: String, subtitle: String, tiles: List<InfoTile>, tapIntent: PendingIntent): RemoteViews {
         val layout = R.layout.field_info
         val v = RemoteViews(context.packageName, layout)
         applyAppearance(v, layout)
         val (w, h) = config.viewSize
-        v.setOnClickPendingIntent(R.id.info_img, infoIntent)
-        v.setContentDescription(R.id.info_img, context.getString(R.string.cd_close))
+        v.setOnClickPendingIntent(R.id.info_img, tapIntent)
+        v.setOnClickPendingIntent(R.id.info_close, infoIntent)
+        v.setContentDescription(R.id.info_close, context.getString(R.string.cd_close))
         if (w <= 0 || h <= 0) return v
         val k = density * scale
         val bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
@@ -898,26 +956,27 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             color = ink
             typeface = if (s.karooStyle) Typeface.create("sans-serif", Typeface.NORMAL) else Typeface.DEFAULT_BOLD
         }
-        tiles.forEachIndexed { i, (label, value) ->
+        tiles.forEachIndexed { i, t ->
             val tx = pad + (i % 2) * (tileW + gap)
             val ty = top + (i / 2) * (tileH + gap)
-            // The drift tile filled by how it's going (blue / green / red), white or black text.
-            val driftFill = if (label == R.string.info_drift) driftPct else null
-            if (driftFill != null) {
-                val f = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { color = color(driftColor(driftFill)) }
+            // A tile with a fill (zone colour, drift): that colour, white or black text on it.
+            val fill = t.fill
+            if (fill != null) {
+                val f = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { color = color(fill) }
                 c.drawRoundRect(tx, ty, tx + tileW, ty + tileH, 6 * k, 6 * k, f)
             } else {
                 c.drawRoundRect(tx, ty, tx + tileW, ty + tileH, 6 * k, 6 * k, tileFill)
             }
             val ink0 = valueP.color
             val label0 = labelP.color
-            if (driftFill != null) {
-                valueP.color = filledInk(s)
-                labelP.color = filledInk(s)
+            if (fill != null) {
+                val on = inkOn(s, fill)
+                valueP.color = on
+                labelP.color = on
             }
-            val text = context.getString(label).let { if (s.karooStyle) it.uppercase() else it }
+            val text = context.getString(t.label).let { if (s.karooStyle) it.uppercase() else it }
             c.drawText(text, tx + 6 * k, ty + 13 * k, labelP)
-            val valueText = value ?: "--"
+            val valueText = t.value ?: "--"
             // As big as the tile allows, up to 26sp
             var sz = minOf(26 * k, tileH - 18 * k)
             valueP.textSize = sz
@@ -1502,6 +1561,13 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         })
         v.setTextColor(value, filledInk(s))
         v.setTextColor(label, filledInk(s))
+    }
+
+    /** Text on a [fill] colour resource: Settings › Tekst na wypełnionych kafelkach (auto: the better contrast). */
+    private fun inkOn(s: ScreenState, fill: Int): Int = when (s.filledText) {
+        FilledText.WHITE -> 0xFFFFFFFF.toInt()
+        FilledText.BLACK -> 0xFF000000.toInt()
+        FilledText.AUTO -> if (android.graphics.Color.luminance(color(fill)) > 0.18f) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
     }
 
     private fun filledInk(s: ScreenState): Int =

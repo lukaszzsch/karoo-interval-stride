@@ -336,6 +336,12 @@
     <string name="info_if">IF</string>
     <string name="info_drift">Dryf tętna</string>
     <string name="info_ride_title">Jazda</string>
+    <string name="info_lap">Okrążenie</string>
+    <string name="info_whole_ride">Cała jazda</string>
+    <string name="info_tap_for">Dotknij: %1$s</string>
+    <string name="info_max_hr">Maks. tętno</string>
+    <string name="info_zone_colors">Kolory stref w ⓘ</string>
+    <string name="info_zone_colors_help">Kafelki mocy (średnia, NP, maks.) i tętna w panelu ⓘ wypełnione kolorem strefy z profilu Karoo, w palecie wybranej w „Kolory stref mocy”.</string>
     <string name="info_ride_time">Czas jazdy</string>
     <string name="info_lap_time">Czas okr.</string>
     <string name="info_lap_hr">Śr. tętno okr.</string>

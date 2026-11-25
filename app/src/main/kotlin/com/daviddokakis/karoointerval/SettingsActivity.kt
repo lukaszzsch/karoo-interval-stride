@@ -150,6 +150,17 @@ class SettingsActivity : AppearanceActivity() {
         form.addView(settingsHelp(getString(R.string.end_alert_help)))
         form.addView(settingsDivider())
 
+        // ⓘ: power and heart rate tiles plain / in their zone colour
+        form.addView(settingsHeading(R.drawable.ic_style, getString(R.string.info_zone_colors)))
+        form.addView(
+            segmented(listOf(R.string.hr_tile_plain to false, R.string.hr_tile_zone_on to true), store.infoZoneColors.value) { on ->
+                store.setInfoZoneColors(on)
+                render()
+            },
+        )
+        form.addView(settingsHelp(getString(R.string.info_zone_colors_help)))
+        form.addView(settingsDivider())
+
         // HR tile: plain / filled with the heart rate zone colour
         form.addView(settingsHeading(R.drawable.ic_style, getString(R.string.hr_tile_zone)))
         form.addView(

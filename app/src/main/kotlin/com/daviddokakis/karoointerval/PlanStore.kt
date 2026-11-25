@@ -163,6 +163,15 @@ class PlanStore private constructor(context: Context) {
         _intervalEndAlert.value = value
     }
 
+    private val _infoZoneColors = MutableStateFlow(prefs.getBoolean("info_zone_colors", false))
+    /** ⓘ: power and heart rate tiles in their zone colour. */
+    val infoZoneColors: StateFlow<Boolean> = _infoZoneColors
+
+    fun setInfoZoneColors(on: Boolean) {
+        prefs.edit().putBoolean("info_zone_colors", on).apply()
+        _infoZoneColors.value = on
+    }
+
     private val _hrTileZone = MutableStateFlow(prefs.getBoolean("hr_tile_zone", false))
     /** HR tile filled with the heart rate zone's colour. */
     val hrTileZone: StateFlow<Boolean> = _hrTileZone

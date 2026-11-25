@@ -164,7 +164,8 @@ class WorkoutSession(
                     resetToStart()
                     PowerHistory.clear()
                     rideDrift.reset()
-                    _state.update { it.copy(rideDriftPct = null) }
+                    lapDrift.reset()
+                    _state.update { it.copy(rideDriftPct = null, lapDriftPct = null, lapCaloriesStart = null) }
                     // A changed version of the workout that came in mid-ride loads now.
                     heldPlan?.let { newer ->
                         heldPlan = null
@@ -195,7 +196,12 @@ class WorkoutSession(
         }
         // Karoo's lap data for the free-ride screen (times come in milliseconds).
         collectInt(DataType.Type.LAP_NUMBER) { v ->
-            if (v != _state.value.lapNumber) freeLapNp.reset()
+            if (v != _state.value.lapNumber) {
+                // A new lap: its NP, drift and calories start over.
+                freeLapNp.reset()
+                lapDrift.reset()
+                _state.update { it.copy(lapCaloriesStart = it.calories, lapDriftPct = null) }
+            }
             _state.update { it.copy(lapNumber = v, freeLapNp = freeLapNp.value) }
         }
         collectInt(DataType.Type.ELAPSED_TIME_LAP, divideBy = 1000) { v -> _state.update { it.copy(lapTimeSec = v) } }
@@ -222,7 +228,11 @@ class WorkoutSession(
         collectInt(DataType.Type.CADENCE_LAP) { v -> _state.update { it.copy(lapCadence = v?.takeIf { c -> c > 0 }) } }
         collectInt(DataType.Type.AVERAGE_CADENCE) { v -> _state.update { it.copy(rideCadence = v?.takeIf { c -> c > 0 }) } }
         _state.update { it.copy(cadTile = store.cadTile) }
-        collectInt(DataType.Type.CALORIES) { v -> _state.update { it.copy(calories = v) } }
+        collectInt(DataType.Type.CALORIES) { v -> _state.update { it.copy(calories = v, lapCaloriesStart = it.lapCaloriesStart ?: v) } }
+        collectInt(DataType.Type.MAX_HR) { v -> _state.update { it.copy(rideMaxHr = v) } }
+        collectInt(DataType.Type.MAX_HR_LAP) { v -> _state.update { it.copy(lapMaxHr = v) } }
+        collectInt(DataType.Type.MAX_POWER_LAP) { v -> _state.update { it.copy(lapMaxPower = v) } }
+        scope.launch { store.infoZoneColors.collect { on -> _state.update { it.copy(infoZoneColors = on) } } }
         scope.launch {
             karoo.streamDataFlow(DataType.Type.SPEED).collect { s -> _state.update { it.copy(speedMs = s.single()) } }
         }
@@ -511,8 +521,13 @@ class WorkoutSession(
     fun toggleInfo() {
         scope.launch {
             val open = !_state.value.infoOpen
-            _state.update { it.copy(infoOpen = open, live = if (open) liveNow() else it.live) }
+            _state.update { it.copy(infoOpen = open, infoShowsRide = false, live = if (open) liveNow() else it.live) }
         }
+    }
+
+    /** ⓘ without a workout: tap switches between the current lap and the whole ride. */
+    fun toggleInfoScope() {
+        scope.launch { _state.update { it.copy(infoShowsRide = !it.infoShowsRide) } }
     }
 
     /** Free ride: tap on the power tile: lap avg → lap NP → ride avg → ride NP → IF → TSS → drift. */
@@ -736,12 +751,14 @@ class WorkoutSession(
         val hr = st.heartRate?.takeIf { it > 0 } ?: return
         if (!recording) return
         rideDrift.add(watts.toDouble(), hr.toDouble())
+        lapDrift.add(watts.toDouble(), hr.toDouble())
         if (workoutRunning()) workoutDrift.add(watts.toDouble(), hr.toDouble())
         // To 0.1 %, so the state only changes when the shown number does.
         _state.update {
             it.copy(
                 workoutDriftPct = workoutDrift.value()?.let { d -> Math.round(d * 10) / 10.0 },
                 rideDriftPct = rideDrift.value()?.let { d -> Math.round(d * 10) / 10.0 },
+                lapDriftPct = lapDrift.value()?.let { d -> Math.round(d * 10) / 10.0 },
             )
         }
     }
@@ -753,6 +770,7 @@ class WorkoutSession(
     /** Heart rate drift of the workout (summary, ⓘ, tile) and of the whole ride (free ride). */
     private val workoutDrift = Drift()
     private val rideDrift = Drift()
+    private val lapDrift = Drift()
 
     private fun resetTotals() {
         workoutMs = 0

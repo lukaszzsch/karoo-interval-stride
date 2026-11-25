@@ -101,6 +101,18 @@ data class ScreenState(
     val rideTss: Int? = null,
     /** The ride's highest power (Karoo). */
     val rideMaxPower: Int? = null,
+    /** The ride's and the lap's highest heart rate, the lap's highest power (Karoo). */
+    val rideMaxHr: Int? = null,
+    val lapMaxHr: Int? = null,
+    val lapMaxPower: Int? = null,
+    /** The ride's calories when the lap began (the lap's are what's added since). */
+    val lapCaloriesStart: Int? = null,
+    /** Heart rate drift (%) of the current lap; null under 20 min. */
+    val lapDriftPct: Double? = null,
+    /** ⓘ without a workout shows the whole ride (true) or the current lap (false, on opening). */
+    val infoShowsRide: Boolean = false,
+    /** Settings › Kolory stref w ⓘ: power and heart rate tiles in their zone colour. */
+    val infoZoneColors: Boolean = false,
     /** What the top row shows. */
     val topRow: TopRow = TopRow.AUTO,
     /** Tiles as an outline instead of a grey fill. */
