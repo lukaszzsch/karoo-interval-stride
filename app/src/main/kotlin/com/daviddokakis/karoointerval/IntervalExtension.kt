@@ -172,7 +172,7 @@ class IntervalExtension : KarooExtension(EXTENSION_ID, "1") {
         val question = getString(R.string.rate_notification_message)
         val drift = workout.state.value.summary?.driftPct ?: return question
         val value = String.format(java.util.Locale.forLanguageTag("pl"), "%.1f", drift)
-        val verdict = getString(if (drift < 5.0) R.string.drift_ok else R.string.drift_high)
+        val verdict = getString(if (drift <= 5.0) R.string.drift_ok else R.string.drift_high)
         return getString(R.string.rate_notification_drift, value, verdict, question)
     }
 

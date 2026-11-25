@@ -469,7 +469,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
                             line
                         } else {
                             android.text.SpannableString(line).apply {
-                                val c = color(if (sm.driftPct!! < 5.0) R.color.watts_in_range else R.color.watts_over)
+                                val c = color(driftColor(sm.driftPct!!))
                                 setSpan(android.text.style.ForegroundColorSpan(c), line.length - drift.length, line.length, 0)
                             }
                         },
@@ -579,6 +579,12 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             rightHr?.let { applyHrZoneTile(v, s, it, R.id.target_tile, R.id.target, R.id.target_label) }
         }
         hrOf(leftShow?.metric)?.let { applyHrZoneTile(v, s, it, R.id.lap_tile, R.id.lap_avg, R.id.lap_avg_label) }
+        // Heart rate drift tiles filled by how it's going: blue under 0, green to 5 %, red above.
+        if (leftShow?.metric == TileMetric.DRIFT) applyDriftTile(v, s, s.workoutDriftPct, R.id.lap_tile, R.id.lap_avg, R.id.lap_avg_label)
+        if (rightShow?.metric == TileMetric.DRIFT) {
+            if (gaugeMode) applyDriftTile(v, s, s.workoutDriftPct, R.id.hr_tile, R.id.hr, R.id.hr_label)
+            else applyDriftTile(v, s, s.workoutDriftPct, R.id.target_tile, R.id.target, R.id.target_label)
+        }
         if (lapState != null) {
             // Filled like the cadence tile, white text (after the custom tiles set their colours).
             setBg(v, R.id.lap_tile, when (lapState) { -1 -> R.drawable.bg_cad_under; 1 -> R.drawable.bg_cad_over; else -> R.drawable.bg_cad_in })
@@ -796,7 +802,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             R.string.info_lap_hr to s.lapHrAvg?.toString(),
         )
         val sub = context.getString(R.string.info_where, s.stepIndex + 1, s.stepCount, formatClock(plan.totalSec))
-        return renderInfo(s, plan.name, sub, tiles)
+        return renderInfo(s, plan.name, sub, tiles, live?.driftPct)
     }
 
     /** ⓘ without a workout (or after it): the whole ride so far, from the Karoo's ride data. */
@@ -816,11 +822,11 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             R.string.info_lap_hr to s.lapHrAvg?.toString(),
         )
         val sub = s.lapNumber?.let { context.getString(R.string.lap_number, it) } ?: ""
-        return renderInfo(s, context.getString(R.string.info_ride_title), sub, tiles)
+        return renderInfo(s, context.getString(R.string.info_ride_title), sub, tiles, s.rideDriftPct)
     }
 
     /** ⓘ: a title, a line under it, and two columns of tiles; ✕ (or a tap anywhere) closes it. */
-    private fun renderInfo(s: ScreenState, title: String, subtitle: String, tiles: List<Pair<Int, String?>>): RemoteViews {
+    private fun renderInfo(s: ScreenState, title: String, subtitle: String, tiles: List<Pair<Int, String?>>, driftPct: Double? = null): RemoteViews {
         val layout = R.layout.field_info
         val v = RemoteViews(context.packageName, layout)
         applyAppearance(v, layout)
@@ -895,7 +901,20 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         tiles.forEachIndexed { i, (label, value) ->
             val tx = pad + (i % 2) * (tileW + gap)
             val ty = top + (i / 2) * (tileH + gap)
-            c.drawRoundRect(tx, ty, tx + tileW, ty + tileH, 6 * k, 6 * k, tileFill)
+            // The drift tile filled by how it's going (blue / green / red), white or black text.
+            val driftFill = if (label == R.string.info_drift) driftPct else null
+            if (driftFill != null) {
+                val f = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { color = color(driftColor(driftFill)) }
+                c.drawRoundRect(tx, ty, tx + tileW, ty + tileH, 6 * k, 6 * k, f)
+            } else {
+                c.drawRoundRect(tx, ty, tx + tileW, ty + tileH, 6 * k, 6 * k, tileFill)
+            }
+            val ink0 = valueP.color
+            val label0 = labelP.color
+            if (driftFill != null) {
+                valueP.color = filledInk(s)
+                labelP.color = filledInk(s)
+            }
             val text = context.getString(label).let { if (s.karooStyle) it.uppercase() else it }
             c.drawText(text, tx + 6 * k, ty + 13 * k, labelP)
             val valueText = value ?: "--"
@@ -907,6 +926,8 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
                 valueP.textSize = sz
             }
             c.drawText(valueText, tx + 6 * k, ty + tileH - 6 * k, valueP)
+            valueP.color = ink0
+            labelP.color = label0
         }
         v.setImageViewBitmap(R.id.info_img, bmp)
         return v
@@ -1129,6 +1150,9 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         applyTopRow(v, s, top, gaugeMode, karoo, free = true)
         applyTileStyle(v, s, gaugeMode)
         if (gaugeMode) applyHrZoneTile(v, s, freeHrShown)
+        // The ride's heart rate drift, when the power or HR tile shows it.
+        if (s.freePowerTile == 6) applyDriftTile(v, s, s.rideDriftPct, R.id.lap_tile, R.id.lap_avg, R.id.lap_avg_label)
+        if (gaugeMode && s.freeHrTile == 3) applyDriftTile(v, s, s.rideDriftPct, R.id.hr_tile, R.id.hr, R.id.hr_label)
 
         // Bottom: the power chart in the space of the next box (48 dp + 6 dp) and the profile.
         v.setViewVisibility(R.id.next_box, View.GONE)
@@ -1462,13 +1486,27 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
     private var freeHrShown: Int? = null
 
     /** Text on the filled cadence and lap tiles (Settings › Napisy na kolorowych kafelkach). */
+    /** Heart rate drift: blue under 0 %, green from 0 to 5 %, red above 5 %. */
+    private fun driftColor(pct: Double): Int = when {
+        pct < 0.0 -> R.color.cad_bg_under
+        pct <= 5.0 -> R.color.cad_bg_in
+        else -> R.color.cad_bg_over
+    }
+
+    private fun applyDriftTile(v: RemoteViews, s: ScreenState, pct: Double?, tile: Int, value: Int, label: Int) {
+        if (pct == null) return
+        setBg(v, tile, when {
+            pct < 0.0 -> R.drawable.bg_cad_under
+            pct <= 5.0 -> R.drawable.bg_cad_in
+            else -> R.drawable.bg_cad_over
+        })
+        v.setTextColor(value, filledInk(s))
+        v.setTextColor(label, filledInk(s))
+    }
+
     private fun filledInk(s: ScreenState): Int =
         if (s.filledText == FilledText.BLACK) 0xFF000000.toInt() else color(R.color.cad_on)
 
-    /**
-     * Settings › Tło kafelka tętna: the HR tile filled with the zone colour of [hr] (Karoo or
-     * Garmin / Zwift palette), black or white text, whichever reads better on it.
-     */
     /**
      * Settings › Koniec interwału: in the interval's last 5 s the clock flashes, a second amber
      * text, a second an amber block with dark text, so the end shows without the beeps.
@@ -1490,6 +1528,10 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
         }
     }
 
+    /**
+     * Settings › Tło kafelka tętna: the HR tile filled with the zone colour of [hr] (Karoo or
+     * Garmin / Zwift palette), black or white text, whichever reads better on it.
+     */
     private fun applyHrZoneTile(v: RemoteViews, s: ScreenState, hr: Int?, tile: Int = R.id.hr_tile, value: Int = R.id.hr, label: Int = R.id.hr_label) {
         if (!s.hrTileZone || s.paused) return
         val zone = s.zoneOf(hr?.takeIf { it > 0 }) ?: return
