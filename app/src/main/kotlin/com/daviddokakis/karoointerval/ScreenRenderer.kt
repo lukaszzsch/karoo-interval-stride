@@ -1208,7 +1208,7 @@ class ScreenRenderer(private val context: Context, private val config: ViewConfi
             )
             val showLast = turns.isNotEmpty() && s.freeLastLap
             v.setViewVisibility(R.id.target_block, if (showLast) View.VISIBLE else View.INVISIBLE)
-            v.setViewPadding(R.id.target_block, (88 * density).toInt(), 0, (48 * density).toInt(), 0)
+            v.setViewPadding(R.id.target_block, (150 * density).toInt(), 0, (44 * density).toInt(), 0)
             v.setTextViewText(R.id.target_label, context.getString(R.string.last_lap_short))
             val turn = if (turns.isEmpty()) "" else turns[((SystemClock.elapsedRealtime() / LAST_LAP_TURN_MS) % turns.size).toInt()]
             v.setTextViewText(R.id.target, turn)
